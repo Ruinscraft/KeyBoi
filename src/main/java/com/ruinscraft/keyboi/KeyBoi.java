@@ -1,12 +1,12 @@
 // current: v1.16
-package com.ruinscraft.dukesmart;
+package com.ruinscraft.keyboi;
 
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
 
-public class DukesMart extends JavaPlugin {
+public class KeyBoi extends JavaPlugin {
 	private FileConfiguration config = getConfig();
 	private MySQLHelper mySQLHelper;
 	private ShopListener sl;

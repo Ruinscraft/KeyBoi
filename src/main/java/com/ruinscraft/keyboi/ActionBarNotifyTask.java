@@ -1,4 +1,4 @@
-package com.ruinscraft.dukesmart;
+package com.ruinscraft.keyboi;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;

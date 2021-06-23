@@ -1,4 +1,4 @@
-package com.ruinscraft.dukesmart;
+package com.ruinscraft.keyboi;
 
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Bukkit;
@@ -18,7 +18,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public class ShopCommandExecutor implements CommandExecutor, TabCompleter{
-	private final DukesMart plugin;
+	private final KeyBoi plugin;
 	
 	private final String PLUGIN_BANNER = "" + ChatColor.GOLD + "----------------[ DukesMart ]----------------";
 	private final String MSG_ERROR_NO_PERMISSION = "" + ChatColor.RED + "You do not have permission to use that command.";
@@ -36,7 +36,7 @@ public class ShopCommandExecutor implements CommandExecutor, TabCompleter{
 	private final List<String> tutorialText;
 	private Map<Player, Long> recentWithdraws;
 	
-	public ShopCommandExecutor(DukesMart plugin) {
+	public ShopCommandExecutor(KeyBoi plugin) {
 		this.plugin = plugin;
 		this.tabOptions = new ArrayList<String>();
 		this.adminTabOptions = new ArrayList<String>();

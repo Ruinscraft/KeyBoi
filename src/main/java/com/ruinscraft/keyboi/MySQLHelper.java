@@ -1,4 +1,4 @@
-package com.ruinscraft.dukesmart;
+package com.ruinscraft.keyboi;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;

@@ -1,10 +1,10 @@
-name: DukesMart
-main: com.ruinscraft.dukesmart.DukesMart
+name: KeyBoi
+main: com.ruinscraft.keyboi.KeyBoi
 version: 1.0
 author: Ruinscraft LLC
 api-version: 1.16
 commands:
-  shop:
-    description: Shows all commands for DukesMart
-    usage: /shop
-    permission: dukesmart.shop
+  key:
+    description: Shows all commands for KeyBoi
+    usage: /key
+    permission: keyboi.general

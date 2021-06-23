@@ -1,4 +1,4 @@
-package com.ruinscraft.dukesmart;
+package com.ruinscraft.keyboi;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -53,7 +53,7 @@ import org.bukkit.scoreboard.Scoreboard;
 import net.md_5.bungee.api.ChatColor;
 
 public class ShopListener implements Listener{
-	private DukesMart plugin;
+	private KeyBoi plugin;
 	
 	private HashMap<Player, BukkitTask> hideDisplayTasks  = new HashMap<Player, BukkitTask>();
 	
@@ -74,7 +74,7 @@ public class ShopListener implements Listener{
 	private final String MSG_ERROR_SHOP_OUT_OF_STOCK = "Sorry, this shop is out of stock. Come back later.";
 	private final String MSG_ERROR_LEDGER_CLEARED = ChatColor.GRAY + "It seems your ledger was cleared in your extended absence...";
 	private final String MSG_WARNING_INCOME_EXPIRES_SOON = ChatColor.RED + "Heads up! Your ledger income will expire in %d days. Don't forget to make a withdraw!";
-    public ShopListener(DukesMart plugin) {
+    public ShopListener(KeyBoi plugin) {
     	this.plugin = plugin;
     }
     

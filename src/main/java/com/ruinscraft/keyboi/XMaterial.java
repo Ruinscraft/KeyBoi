@@ -1,4 +1,4 @@
-package com.ruinscraft.dukesmart;
+package com.ruinscraft.keyboi;
 /*
  * The MIT License (MIT)
  *

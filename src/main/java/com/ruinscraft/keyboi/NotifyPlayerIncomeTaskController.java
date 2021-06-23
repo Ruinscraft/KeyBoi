@@ -1,4 +1,4 @@
-package com.ruinscraft.dukesmart;
+package com.ruinscraft.keyboi;
 
 import java.util.HashMap;
 
@@ -9,13 +9,13 @@ import org.bukkit.scheduler.BukkitTask;
 import net.md_5.bungee.api.ChatColor;
 
 public class NotifyPlayerIncomeTaskController {
-	private DukesMart plugin;
+	private KeyBoi plugin;
 	private HashMap<Player, BukkitTask> tasks = new HashMap<Player, BukkitTask>();
 	private final String message = "" + ChatColor.GREEN + ChatColor.BOLD + "You've got cash! " + ChatColor.GOLD + "/shop balance";
 	
 	private int DELAY_SECONDS = 2;
 	
-	public NotifyPlayerIncomeTaskController(DukesMart plugin) {
+	public NotifyPlayerIncomeTaskController(KeyBoi plugin) {
 		this.plugin = plugin;
 	}
 	

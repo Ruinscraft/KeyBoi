@@ -10,11 +10,13 @@ import java.util.Map.Entry;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.block.Banner;
 import org.bukkit.block.Barrel;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.block.BlockState;
 import org.bukkit.block.Chest;
 import org.bukkit.block.Container;
 import org.bukkit.block.DoubleChest;
@@ -23,6 +25,7 @@ import org.bukkit.block.Sign;
 import org.bukkit.block.banner.Pattern;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.Directional;
+import org.bukkit.block.data.type.Door;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -45,6 +48,10 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.MapMeta;
 import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.map.MapView;
+import org.bukkit.metadata.FixedMetadataValue;
+import org.bukkit.metadata.MetadataValue;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.Objective;
@@ -55,39 +62,12 @@ import net.md_5.bungee.api.ChatColor;
 public class KeyListener implements Listener{
 	private KeyBoi plugin;
 	
-	private HashMap<Player, BukkitTask> hideDisplayTasks  = new HashMap<Player, BukkitTask>();
-	
-	private final int HIDE_SHOP_DISPLAY_SECONDS = 15;
-	private final String SHOP_SIGN_NO_ITEM      = "" + ChatColor.WHITE + "?";
-	private final String SHOP_SIGN_IDENTIFIER   = "" + ChatColor.DARK_PURPLE + "[Buy]";
-	private final String SHOP_SIGN_OWNER_COLOR  = "" + ChatColor.DARK_BLUE;
-	
-	private final String PLUGIN_NAME = ChatColor.GOLD + "DukesMart";
-
     public KeyListener(KeyBoi plugin) {
     	this.plugin = plugin;
     }
- 
-    /*
-     * This will handle shop creation if a player
-     * places a sign with proper values.
-     */
-    @EventHandler
-    public void onSignChangeEvent(SignChangeEvent evt) {
-    	Player player = evt.getPlayer();
-    	Block block = evt.getBlock();
-    	
-    	if(block.getState() instanceof Sign) {
-    		evt.setLine(0, SHOP_SIGN_IDENTIFIER);
-			evt.setLine(1, SHOP_SIGN_NO_ITEM);
-    		evt.setLine(3, SHOP_SIGN_OWNER_COLOR + player.getName());
 
-    		player.sendMessage(ChatColor.AQUA + "Hold an item you want to sell and right-click the sign to finish setup.");
-    	}
-    }
-    
     /**
-     * This function handles all Player interactions with a shop sign.
+     * This function handles all Player interactions with a locked blocks.
      * @param evt - called Player interact event
      */
     @EventHandler
@@ -97,42 +77,102 @@ public class KeyListener implements Listener{
         if (evt.getAction() == Action.RIGHT_CLICK_BLOCK) {
         	Block clickedBlock = evt.getClickedBlock();
         	
-            if (blockIsSign(clickedBlock)){
-            	
-            	
-            	// a shop is defined as a sign (formatted)
-            	// and a chest block immediately below it.
-                Sign sign = (Sign) clickedBlock.getState();
-
-                BlockData data = clickedBlock.getBlockData();
-                Block block = null;
-                // first, get the block that the sign is attached to
-
-                if (data instanceof Directional)
-                {
-                    Directional directional = (Directional)data;
-                    block = clickedBlock.getRelative(directional.getFacing().getOppositeFace());
-                }
-            }
+        	if (blockIsLockable(clickedBlock)) {
+        		BlockState state = clickedBlock.getState();
+        		BlockData data = clickedBlock.getBlockData();
+        		
+        		if(stateHasKeyMetadata(state)) {
+        			List<MetadataValue> meta = stateGetKeyMetadata(state);
+        			
+        			player.sendMessage("(Debug) Block has KeyBoi data");
+        			for(MetadataValue m : meta) {
+        				player.sendMessage(m.value().toString());
+        			}
+        		}
+        		// TODO: debug values
+        		else {
+        			ItemStack key = new ItemStack(Material.STICK);
+        			ItemMeta keyMeta = key.getItemMeta();
+        			PersistentDataContainer keyPdc = keyMeta.getPersistentDataContainer();
+        			NamespacedKey keycreatorKey = new NamespacedKey(plugin, "keyboi-keycreator");
+            		NamespacedKey hashKey = new NamespacedKey(plugin, "keyboi-hash");
+            		
+        			keyPdc.set(keycreatorKey, PersistentDataType.STRING, player.getUniqueId().toString());
+        			keyPdc.set(hashKey, PersistentDataType.STRING, "fakehash");
+        			
+        			keyMeta.setDisplayName("Example Key");
+        			key.setItemMeta(keyMeta);
+        			
+        			lockBlock(player, key, state);
+        			if(state.update()) {
+        				player.sendMessage("(Debug) Block has been locked with debug key");
+        			}
+        		}
+        		
+        	}
         }
     }
-
-	/**
-     * Updates a sign's text to reflect any changes,
-     * such as item or owner's name
-     * 
-     * @param sign Sign to update
-     */
-	private void updateSign(Sign sign) {
-		Location location = sign.getLocation();
-	}
-
-	@EventHandler
-    public void onBlockBreak(BlockBreakEvent evt) {
-    	Player player = evt.getPlayer();
-    	Block  block  = evt.getBlock();
+    
+    private void lockBlock(Player player, ItemStack key, BlockState state) {
+    	String keyname = "";
+    	String keycreator = null;
+    	String hash = null;
+    	
+    	if(key.hasItemMeta()) {
+    		ItemMeta meta = key.getItemMeta();
+    		PersistentDataContainer pdc = meta.getPersistentDataContainer();
+    		NamespacedKey keycreatorKey = new NamespacedKey(plugin, "keyboi-keycreator");
+    		NamespacedKey hashKey = new NamespacedKey(plugin, "keyboi-hash");
+    		
+    		if(meta.hasDisplayName()) {
+    			keyname = key.getItemMeta().getDisplayName();
+    		}
+    		else {
+    			keyname = key.getType().toString();
+    		}
+    		
+    		if(pdc.has(keycreatorKey, PersistentDataType.STRING)) {
+    			keycreator = pdc.get(keycreatorKey, PersistentDataType.STRING);
+    		}
+    		
+    		if(pdc.has(hashKey, PersistentDataType.STRING)) {
+    			hash = pdc.get(hashKey, PersistentDataType.STRING);
+    		}
+    	}
+    	state.setMetadata("keyboi-locked", new FixedMetadataValue(plugin, true));
+    	state.setMetadata("keyboi-keyname", new FixedMetadataValue(plugin, keyname));
+    	state.setMetadata("keyboi-keymaterial", new FixedMetadataValue(plugin, key.getType().toString()));
+    	state.setMetadata("keyboi-keycreator", new FixedMetadataValue(plugin, keycreator));
+    	state.setMetadata("keyboi-hash", new FixedMetadataValue(plugin, hash));
+    	
+    	if(state.update()) {
+    		player.sendMessage("Block successfully locked");
+    	}
     }
-	
+    
+    private boolean stateHasKeyMetadata(BlockState state) {
+    	return state.hasMetadata("keyboi-locked")
+    		&& state.hasMetadata("keyboi-keyname")
+    		&& state.hasMetadata("keyboi-keymaterial")
+    		&& state.hasMetadata("keyboi-keycreator")
+    		&& state.hasMetadata("keyboi-hash");
+    		//&& state.hasMetadata("keyboi-whoplacedblock");
+    }
+    
+    private List<MetadataValue> stateGetKeyMetadata(BlockState state) {
+    	List<MetadataValue> keymeta = new ArrayList<MetadataValue>();
+    	
+    	keymeta.add(state.getMetadata("keyboi-locked").get(0));
+    	keymeta.add(state.getMetadata("keyboi-keyname").get(0));
+    	keymeta.add(state.getMetadata("keyboi-keymaterial").get(0));
+    	keymeta.add(state.getMetadata("keyboi-keycreator").get(0));
+    	//keymeta.add(state.getMetadata("keyboi-whoplacedblock").get(0));
+    	
+    	return keymeta;
+    }
+    private boolean blockIsLockable(Block block) {
+    	return blockIsDoor(block) || blockIsTrapdoor(block) || blockIsGate(block) || blockIsStorage(block);
+    }
 	/**
 	 * Checks whether a block is a sign.
 	 * @param block
@@ -150,7 +190,47 @@ public class KeyListener implements Listener{
     		 || block.getType().equals(Material.WARPED_WALL_SIGN)
     		 );
     }
+	
+	private boolean blockIsDoor(Block block) {
+		return block != null && (
+    		    block.getType().equals(Material.ACACIA_DOOR)
+    		 || block.getType().equals(Material.BIRCH_DOOR)
+    		 || block.getType().equals(Material.CRIMSON_DOOR)
+    		 || block.getType().equals(Material.DARK_OAK_DOOR)
+    		 || block.getType().equals(Material.IRON_DOOR)
+    		 || block.getType().equals(Material.JUNGLE_DOOR)
+    		 || block.getType().equals(Material.OAK_DOOR)
+    		 || block.getType().equals(Material.SPRUCE_DOOR)
+    		 || block.getType().equals(Material.WARPED_DOOR)
+    		 );
+	}
     
+	private boolean blockIsTrapdoor(Block block) {
+		return block != null && (
+    		    block.getType().equals(Material.ACACIA_TRAPDOOR)
+    		 || block.getType().equals(Material.BIRCH_TRAPDOOR)
+    		 || block.getType().equals(Material.CRIMSON_TRAPDOOR)
+    		 || block.getType().equals(Material.DARK_OAK_TRAPDOOR)
+    		 || block.getType().equals(Material.IRON_TRAPDOOR)
+    		 || block.getType().equals(Material.JUNGLE_TRAPDOOR)
+    		 || block.getType().equals(Material.OAK_TRAPDOOR)
+    		 || block.getType().equals(Material.SPRUCE_TRAPDOOR)
+    		 || block.getType().equals(Material.WARPED_TRAPDOOR)
+    		 );
+	}
+	
+	private boolean blockIsGate(Block block) {
+		return block != null && (
+    		    block.getType().equals(Material.ACACIA_FENCE_GATE)
+    		 || block.getType().equals(Material.BIRCH_FENCE_GATE)
+    		 || block.getType().equals(Material.CRIMSON_FENCE_GATE)
+    		 || block.getType().equals(Material.DARK_OAK_FENCE_GATE)
+    		 || block.getType().equals(Material.JUNGLE_FENCE_GATE)
+    		 || block.getType().equals(Material.OAK_FENCE_GATE)
+    		 || block.getType().equals(Material.SPRUCE_FENCE_GATE)
+    		 || block.getType().equals(Material.WARPED_FENCE_GATE)
+    		 );
+	}
     /**
      * Checks whether a block is a chest, double chest, or barrel
      * (note that Enderchests are not checked)
@@ -158,7 +238,11 @@ public class KeyListener implements Listener{
      * @return True if block is chest, False otherwise
      */
     private boolean blockIsStorage(Block block) {
-    	return block != null && (block.getState() instanceof Chest || block.getState() instanceof DoubleChest || block.getState() instanceof Barrel);
+    	return block != null && (
+    			block.getState() instanceof Chest
+    		 || block.getState() instanceof DoubleChest
+    		 || block.getState() instanceof Barrel
+    		 );
     }
     
     private String materialPrettyPrint(Material material) {

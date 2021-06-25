@@ -22,7 +22,6 @@ public class KeyCommandExecutor implements CommandExecutor, TabCompleter{
 	
 	private final String PLUGIN_BANNER = ChatColor.GOLD + "---------------[ KeyBoi ]---------------";
 	private final String MSG_ERROR_NO_PERMISSION = ChatColor.RED + "You do not have permission to use that command.";
-	private final String MSG_DOOR_IS_LOCKED = ChatColor.YELLOW + "You need a key to unlock this %s.";
 	
 	private final List<String> tabOptions;
 	private final List<String> adminTabOptions;

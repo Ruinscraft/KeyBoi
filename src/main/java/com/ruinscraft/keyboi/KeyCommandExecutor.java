@@ -2,6 +2,8 @@ package com.ruinscraft.keyboi;
 
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -10,6 +12,9 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -21,7 +26,10 @@ public class KeyCommandExecutor implements CommandExecutor, TabCompleter{
 	private final KeyBoi plugin;
 	
 	private final String PLUGIN_BANNER = ChatColor.GOLD + "---------------[ KeyBoi ]---------------";
+	
+	private final String MSG_SUCCESSFULLY_CREATED_KEY = ChatColor.GREEN + "Successfully created %d key(s)!";
 	private final String MSG_ERROR_NO_PERMISSION = ChatColor.RED + "You do not have permission to use that command.";
+	private final String MSG_ERROR_NO_ITEM_IN_HAND = ChatColor.RED + "You need to hold an item before creating a key.";
 	
 	private final List<String> tabOptions;
 	private final List<String> adminTabOptions;
@@ -33,12 +41,7 @@ public class KeyCommandExecutor implements CommandExecutor, TabCompleter{
 		this.adminTabOptions = new ArrayList<String>();
 		this.tutorialText = new ArrayList<String>();
 
-		tabOptions.add("balance");
-		tabOptions.add("top");
-		tabOptions.add("tutorial");
-		tabOptions.add("view");
-		tabOptions.add("withdraw");
-		
+		tabOptions.add("create");
 		
 		adminTabOptions.add("history");
 		
@@ -61,6 +64,9 @@ public class KeyCommandExecutor implements CommandExecutor, TabCompleter{
 		
 		if(args.length >= 1) {
 			switch(args[0].toLowerCase()){
+				case "create":
+					createKey(player);
+					break;
 				default:
 					showHelp(player);
 					break;
@@ -132,7 +138,42 @@ public class KeyCommandExecutor implements CommandExecutor, TabCompleter{
 		}
 	}
 
-	
+	private void createKey(Player caller) {
+		PlayerInventory callerInventory = caller.getInventory();
+		ItemStack itemInHand = callerInventory.getItemInMainHand();
+		if(itemInHand != null && !itemInHand.getType().equals(Material.AIR)) {
+			
+			ItemMeta meta = itemInHand.getItemMeta();
+			PersistentDataContainer pdc = meta.getPersistentDataContainer();
+			
+			NamespacedKey keycreatorKey = new NamespacedKey(plugin, "keyboi-keycreator");
+    		NamespacedKey hashKey = new NamespacedKey(plugin, "keyboi-hash");
+    		
+			pdc.set(keycreatorKey, PersistentDataType.STRING, caller.getUniqueId().toString());
+			pdc.set(hashKey, PersistentDataType.STRING, "examplehash"); // TODO: add hash computing method
+			
+			List<String> loreList = new ArrayList<String>();
+			loreList.add(ChatColor.GOLD + "-- Key --");
+			loreList.add(ChatColor.GRAY + "This item may open");
+			loreList.add(ChatColor.GRAY + "a locked door or chest");
+			loreList.add(ChatColor.GRAY + "somewhere in the world...");
+			loreList.add("");
+			loreList.add(ChatColor.GRAY + "Creator: " + caller.getName());
+			
+			meta.setLore(loreList);
+			
+			itemInHand.setItemMeta(meta);
+			
+			if(caller.isOnline()) {
+				caller.sendMessage(String.format(MSG_SUCCESSFULLY_CREATED_KEY, itemInHand.getAmount()));
+			}
+		}
+		else {
+			if(caller.isOnline()) {
+				caller.sendMessage(MSG_ERROR_NO_ITEM_IN_HAND);
+			}
+		}
+	}
 	private void showTutorial(Player caller) {
 		if(caller.isOnline()) {
 			for(String line : this.tutorialText) {

@@ -173,24 +173,7 @@ public class KeyListener implements Listener{
     private boolean blockIsLockable(Block block) {
     	return blockIsDoor(block) || blockIsTrapdoor(block) || blockIsGate(block) || blockIsStorage(block);
     }
-	/**
-	 * Checks whether a block is a sign.
-	 * @param block
-	 * @return True if block is sign, False otherwise
-	 */
-	private boolean blockIsSign(Block block) {
-    	return block != null && (
-    		    block.getType().equals(Material.ACACIA_WALL_SIGN)
-    		 || block.getType().equals(Material.BIRCH_WALL_SIGN)
-    		 || block.getType().equals(Material.CRIMSON_WALL_SIGN)
-    		 || block.getType().equals(Material.DARK_OAK_WALL_SIGN)
-    		 || block.getType().equals(Material.JUNGLE_WALL_SIGN)
-    		 || block.getType().equals(Material.OAK_WALL_SIGN)
-    		 || block.getType().equals(Material.SPRUCE_WALL_SIGN)
-    		 || block.getType().equals(Material.WARPED_WALL_SIGN)
-    		 );
-    }
-	
+
 	private boolean blockIsDoor(Block block) {
 		return block != null && (
     		    block.getType().equals(Material.ACACIA_DOOR)
@@ -275,25 +258,6 @@ public class KeyListener implements Listener{
     	output = output.trim();
     	return output;
     }
-    
-    private String shopGuiPad(String message) {
-    	message += ChatColor.RESET;
-    	
-    	while(message.length() < 32) {
-    		message += " ";
-    	}
-    	
-    	return message;
-    }
-    
-	/**
-     * Returns the Location data of a shop sign
-     * @param s Sign representing a shop
-     * @return Sign location data
-     */
-    private Location getShopLocation(Sign s) {
-		return s.getLocation();
-	}
 
     /**
      * Sends an error message to the player.

@@ -12,6 +12,8 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.meta.BookMeta;
+import org.bukkit.inventory.meta.BookMeta.Generation;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
@@ -42,16 +44,18 @@ public class KeyCommandExecutor implements CommandExecutor, TabCompleter{
 		this.tutorialText = new ArrayList<String>();
 
 		tabOptions.add("create");
+		tabOptions.add("tutorial");
 		
-		adminTabOptions.add("history");
-		
-		tutorialText.add(ChatColor.GOLD + "--- How to create a chest shop ---");
-		tutorialText.add(ChatColor.AQUA + " 1. Place a sign on or above a chest.");
-		tutorialText.add(ChatColor.AQUA + " 2. On the first line, put \"[Buy]\" (case-insensitive)");
-		tutorialText.add(ChatColor.AQUA + " 3. On the third line, put \"x for $y\", where x is the quantity of the item, and y is the price in gold ingots.");
-		tutorialText.add(ChatColor.AQUA + " 4. Finally, right-click the sign with the item to sell in your hand.");
-		tutorialText.add(ChatColor.AQUA + " 5. Place all items for sale in the chest.");
-		
+		tutorialText.add(ChatColor.GOLD + "--- How to create a key ---");
+		tutorialText.add(ChatColor.AQUA + " 1. Find an item or block you want to make into a key");
+		tutorialText.add(ChatColor.AQUA + " 2. With the item or block in hand, type \"/key create\"");
+		tutorialText.add(ChatColor.AQUA + " 3. Your item(s) are now keys");
+		tutorialText.add(ChatColor.AQUA + " Note: this will create keys out of every item in the stack.");
+		tutorialText.add(ChatColor.AQUA + " ");
+		tutorialText.add(ChatColor.GOLD + "--- How to create a padlock ---");
+		tutorialText.add(ChatColor.AQUA + " 1. Place a sign on a door, trapdoor, gate, chest, or barrel");
+		tutorialText.add(ChatColor.AQUA + " 2. On the first line, put \"[Key]\" (case-insensitive)");
+		tutorialText.add(ChatColor.AQUA + " 3. Right-click on the lock sign with a key");
 	}
 	
 	@Override
@@ -66,6 +70,9 @@ public class KeyCommandExecutor implements CommandExecutor, TabCompleter{
 			switch(args[0].toLowerCase()){
 				case "create":
 					createKey(player);
+					break;
+				case "tutorial":
+					showTutorial(player);
 					break;
 				default:
 					showHelp(player);
@@ -91,6 +98,7 @@ public class KeyCommandExecutor implements CommandExecutor, TabCompleter{
                 }
             }
             
+            // TODO: I can't think of any admin commands, so this section will likely be removed
             if(sender.hasPermission("keyboi.admin")) {
             	for (String option : adminTabOptions) {
                     if (option.startsWith(args[0].toLowerCase())) {
@@ -100,39 +108,24 @@ public class KeyCommandExecutor implements CommandExecutor, TabCompleter{
             }
         }
         
-        if (args.length == 2) {
-            if(args[0].equalsIgnoreCase("view")) {
-            	completions.add("recent");
-            }
-            else if( (args[0].equalsIgnoreCase("history") || args[0].equalsIgnoreCase("balance") )&& sender.hasPermission("dukesmart.shop.admin")) {
-            	for(Player p : Bukkit.getOnlinePlayers()) {
-            		completions.add(p.getName());
-            	}
-            }
-        }
-
         return completions;
 	}
 	
 	private void showHelp(Player player) {
 		String[] commandHelpBase = {
-			ChatColor.DARK_AQUA + "  /shop" + ChatColor.AQUA + " balance" + ChatColor.GRAY + ": Check your ledger balance",
-			ChatColor.DARK_AQUA + "  /shop" + ChatColor.AQUA + " top" + ChatColor.GRAY + ": View top 10 earners",
-			ChatColor.DARK_AQUA + "  /shop" + ChatColor.AQUA + " tutorial" + ChatColor.GRAY + ": How to create a chest shop",
-			ChatColor.DARK_AQUA + "  /shop" + ChatColor.AQUA + " withdraw ($)" + ChatColor.GRAY + ": Removes money from your ledger",
-			ChatColor.DARK_AQUA + "  /shop" + ChatColor.AQUA + " view recent" + ChatColor.GRAY + ": View ten most recent transactions for a shop"
+			ChatColor.DARK_AQUA + "  /key" + ChatColor.AQUA + " create" + ChatColor.GRAY + ": Creates key(s) from a stack of items",
+			ChatColor.DARK_AQUA + "  /key" + ChatColor.AQUA + " tutorial" + ChatColor.GRAY + ": How to create a KeyBoi lock",
 		};
 		
 		String[] commandHelpAdmin = {
-			ChatColor.DARK_AQUA + "  /shop" + ChatColor.AQUA + " balance (player)" + ChatColor.GRAY + ": Check a player's ledger balance", 
-			ChatColor.DARK_AQUA + "  /shop" + ChatColor.AQUA + " history (player)" + ChatColor.GRAY + ": View ten most recent transactions made by a player"
 		};
 			
 		if(player.isOnline()) {
 			player.sendMessage(this.PLUGIN_BANNER);
 			player.sendMessage(commandHelpBase);
 			
-			if(player.hasPermission("dukesmart.shop.admin")) {
+			// TODO: I can't think of any admin commands, so this section will likely be removed
+			if(player.hasPermission("keyboi.admin")) {
 				player.sendMessage(commandHelpAdmin);
 			}
 		}
@@ -149,9 +142,6 @@ public class KeyCommandExecutor implements CommandExecutor, TabCompleter{
 			NamespacedKey keycreatorKey = new NamespacedKey(plugin, "keyboi-creator");
     		NamespacedKey hashKey = new NamespacedKey(plugin, "keyboi-hash");
     		
-			pdc.set(keycreatorKey, PersistentDataType.STRING, caller.getUniqueId().toString());
-			pdc.set(hashKey, PersistentDataType.STRING, "examplehash"); // TODO: add hash computing method
-			
 			List<String> loreList = new ArrayList<String>();
 			loreList.add(ChatColor.GOLD + "-- Key --");
 			loreList.add(ChatColor.GRAY + "This item may open");
@@ -159,8 +149,16 @@ public class KeyCommandExecutor implements CommandExecutor, TabCompleter{
 			loreList.add(ChatColor.GRAY + "somewhere in the world...");
 			loreList.add("");
 			loreList.add(ChatColor.GRAY + "Creator: " + caller.getName());
-			
 			meta.setLore(loreList);
+			
+			if(itemIsFinishedBook(itemInHand)) {
+				BookMeta bookmeta = (BookMeta) meta;
+				bookmeta.setGeneration(Generation.TATTERED);
+				itemInHand.setItemMeta(bookmeta);
+			}
+			
+			pdc.set(keycreatorKey, PersistentDataType.STRING, caller.getUniqueId().toString());
+			pdc.set(hashKey, PersistentDataType.STRING, DataManager.computeMD5Hash(itemInHand));
 			
 			itemInHand.setItemMeta(meta);
 			
@@ -174,6 +172,7 @@ public class KeyCommandExecutor implements CommandExecutor, TabCompleter{
 			}
 		}
 	}
+	
 	private void showTutorial(Player caller) {
 		if(caller.isOnline()) {
 			for(String line : this.tutorialText) {
@@ -181,43 +180,8 @@ public class KeyCommandExecutor implements CommandExecutor, TabCompleter{
 			}
 		}
 	}
-	/**
-	 * Checks if a given string is a number
-	 * 
-	 * @param str - String to check
-	 * @return True if the string consists of only numbers, False otherwise
-	 */
-	private boolean stringIsNumeric(String str) {
-		for(char c : str.toCharArray()) {
-			if(!Character.isDigit(c)) {
-				return false;
-			}
-		}
-		
-		return true;
-	}
 	
-	/**
-	 * Safely converts a string consisting of numeric values
-	 * into an integer. If the value of the number is greater than
-	 * an integer's max value, it will truncate the value to it.
-	 * 
-	 * @param str - String to check for numeric value
-	 * @return int value of the string, or -1 on error
-	 */
-	private int safeStringToInt(String str) {
-		if(stringIsNumeric(str)) {
-			if(str.length() > 10) {
-				str = str.substring(0, 10);
-			}
-
-			if(Double.parseDouble(str) > Integer.MAX_VALUE) {
-				return Integer.MAX_VALUE - 1;
-			}
-			else {
-				return Integer.parseInt(str);
-			}
-		}
-		return -1;
-	}
+	private boolean itemIsFinishedBook(ItemStack item) {
+    	return item != null && item.getType().equals(Material.WRITTEN_BOOK);
+    }
 }

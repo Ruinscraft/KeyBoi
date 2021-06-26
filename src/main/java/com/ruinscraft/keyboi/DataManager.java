@@ -1,6 +1,10 @@
 package com.ruinscraft.keyboi;
 
+import java.io.ByteArrayOutputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
@@ -11,9 +15,11 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.block.Sign;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.util.io.BukkitObjectOutputStream;
 
 public class DataManager {
 	public static KeyBoi plugin;
@@ -51,6 +57,13 @@ public class DataManager {
 			
 			if(meta.hasDisplayName()) {
 				keyName = key.getItemMeta().getDisplayName();
+			}
+			else if(meta instanceof BookMeta) {
+				BookMeta bm = (BookMeta) meta;
+				
+				if(bm.hasTitle()) {
+					keyName = bm.getTitle();
+				}
 			}
 			else {
 				keyName = key.getType().toString();
@@ -147,9 +160,21 @@ public class DataManager {
 			
 			String keyName = null;
 			String keyCreator = keyData.get(new NamespacedKey(plugin, "keyboi-creator"), PersistentDataType.STRING);
+			String hash = keyData.get(new NamespacedKey(plugin, "keyboi-hash"), PersistentDataType.STRING);
+			
+			if(keyCreator == null || hash == null) {
+				return false;
+			}
 			
 			if(keyMeta.hasDisplayName()) {
 				keyName = keyMeta.getDisplayName();
+			}
+			else if(keyMeta instanceof BookMeta) {
+				BookMeta bm = (BookMeta) keyMeta;
+				
+				if(bm.hasTitle()) {
+					keyName = bm.getTitle();
+				}
 			}
 			else {
 				keyName = key.getType().toString();
@@ -157,7 +182,8 @@ public class DataManager {
 			
 			return keyName.equals(lock.get(new NamespacedKey(plugin, KEY_KEYNAME), PersistentDataType.STRING))
 				&& key.getType().name().equals(lock.get(new NamespacedKey(plugin, KEY_KEYMATERIAL), PersistentDataType.STRING))
-				&& keyCreator.equals(lock.get(new NamespacedKey(plugin, KEY_KEYCREATOR), PersistentDataType.STRING));
+				&& keyCreator.equals(lock.get(new NamespacedKey(plugin, KEY_KEYCREATOR), PersistentDataType.STRING))
+				&& hash.equals(lock.get(new NamespacedKey(plugin, KEY_HASH), PersistentDataType.STRING));
 		}
 		else {
 			return false;
@@ -181,4 +207,40 @@ public class DataManager {
 		
 		return data;
 	}
+	
+	public static String computeMD5Hash(ItemStack key) {
+		MessageDigest md;
+		try {
+			md = MessageDigest.getInstance("MD5");
+			md.update(itemTo64(key).getBytes());
+		    byte[] digest = md.digest();
+		    char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray();
+	        char[] hexChars = new char[digest.length * 2];
+	        for (int j = 0; j < digest.length; j++) {
+	            int v = digest[j] & 0xFF;
+	            hexChars[j * 2] = HEX_ARRAY[v >>> 4];
+	            hexChars[j * 2 + 1] = HEX_ARRAY[v & 0x0F];
+	        }
+	        return new String(hexChars);
+		} catch (NoSuchAlgorithmException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	    return null;
+	}
+	
+	public static String itemTo64(ItemStack stack) throws IllegalStateException {
+        try {
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            BukkitObjectOutputStream dataOutput = new BukkitObjectOutputStream(outputStream);
+            dataOutput.writeObject(stack);
+
+            // Serialize that array
+            dataOutput.close();
+            return Base64.getEncoder().encodeToString(outputStream.toByteArray());
+        }
+        catch (Exception e) {
+            throw new IllegalStateException("Unable to save item stack.", e);
+        }
+    }
 }

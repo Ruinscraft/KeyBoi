@@ -66,7 +66,7 @@ import net.md_5.bungee.api.ChatColor;
 public class KeyListener implements Listener{
 	private KeyBoi plugin;
 	
-	private final String LOCK_SIGN_IDENTIFIER = ChatColor.DARK_RED + "[Key]";
+	private final String LOCK_SIGN_IDENTIFIER = ChatColor.DARK_BLUE + "[Key]";
 	private final String LOCK_SIGN_IDENTIFIER_NO_COLOR = "[Key]";
 	
 	private final String MSG_KEY_SIGN_PLACED = ChatColor.GREEN + "Key sign placed! Use a key on the sign to set the lock.";
@@ -108,7 +108,7 @@ public class KeyListener implements Listener{
     }
     
     /**
-     * This function handles all Player interactions with a locked blocks.
+     * This function handles all Player interactions with locked blocks.
      * @param evt - called Player interact event
      */
     @EventHandler
@@ -199,7 +199,7 @@ public class KeyListener implements Listener{
 	        			else if(playerHoldingKey(player)){
 	        				ItemStack key = player.getInventory().getItemInMainHand();
 	        				
-	        				if(key != null && !key.getType().equals(Material.AIR)) {
+	        				if(!itemIsAir(key)) {
 		        				dm.setKeyTags(player, key, sign);
 		        				
 		        				if(player.isOnline()) {
@@ -346,50 +346,14 @@ public class KeyListener implements Listener{
     }
     
     private boolean itemIsFinishedBook(ItemStack item) {
-    	return item != null && item.getType().equals(XMaterial.WRITTEN_BOOK.parseMaterial());
+    	return item != null && item.getType().equals(Material.WRITTEN_BOOK);
     }
     
     private boolean itemIsWritableBook(ItemStack item) {
-    	return item != null && item.getType().equals(XMaterial.WRITABLE_BOOK.parseMaterial());
+    	return item != null && item.getType().equals(Material.WRITABLE_BOOK);
     }
     
     private boolean itemIsAir(ItemStack item) {
-    	return item != null && item.getType().equals(XMaterial.AIR.parseMaterial());
+    	return item != null && item.getType().equals(Material.AIR);
     }
-    
-    private boolean itemIsBanner(ItemStack item) {
-    	return item != null && item.getType().name().contains("BANNER");
-    }
-    
-    private boolean itemIsShield(ItemStack item) {
-    	return item != null && item.getType().equals(XMaterial.SHIELD.parseMaterial());
-    }
-    
-    private boolean itemIsPotion(ItemStack item) {
-		return item != null && item.getType().name().contains("POTION");
-	}
-    
-    private boolean itemIsFilledMap(ItemStack item) {
-    	return item != null && item.getType().equals(XMaterial.FILLED_MAP.parseMaterial());
-    }
-    
-    private boolean itemIsShulkerBox(ItemStack item) {
-    	return item != null && item.getType().name().contains("SHULKER_BOX");
-    }
-    
-    private boolean itemIsEnchantedBook(ItemStack item) {
-    	return item != null && item.getType().equals(XMaterial.ENCHANTED_BOOK.parseMaterial());
-    }
-    
-    private boolean itemIsTippedArrow(ItemStack item) {
-    	return item != null && item.getType().equals(XMaterial.TIPPED_ARROW.parseMaterial());
-    }
-    
-    private boolean itemIsPolishedBlackstone(ItemStack item) {
-    	return item != null && item.getType().name().contains("POLISHED_BLACKSTONE");
-    }
-    
-    private boolean itemIsPlayerHead(ItemStack itemToBuy) {
-		return itemToBuy != null && itemToBuy.getType().equals(Material.PLAYER_HEAD);
-	}
 }

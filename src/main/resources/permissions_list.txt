@@ -5,9 +5,8 @@ To be filled as needed
 
 All players
 -----------
-dukesmart.shop
+keyboi.general
 
-Helper, Mod, & Admin
+Admin
 --------------------
-dukesmart.shop.edit - edit a shop's values (likely won't be used)
-dukesmart.shop.admin - admin-only functions
+keyboi.admin - allows admins to access any locked chest/door/etc.

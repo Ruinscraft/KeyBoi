@@ -2,7 +2,9 @@ package com.ruinscraft.keyboi;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
+import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.Sign;
 import org.bukkit.entity.Player;
@@ -106,4 +108,18 @@ public class DataManager {
 			&& pdc.has(new NamespacedKey(plugin, KEY_HASH), PersistentDataType.STRING)
 			&& pdc.has(new NamespacedKey(plugin, KEY_LOCK_OWNER), PersistentDataType.STRING);
     }
+	
+	public String containerToString(PersistentDataContainer pdc) {
+		String keyCreator = pdc.get(new NamespacedKey(plugin, KEY_KEYCREATOR), PersistentDataType.STRING);
+		
+		if(!keyCreator.equalsIgnoreCase("N/A")){
+			keyCreator = Bukkit.getOfflinePlayer(UUID.fromString(keyCreator)).getName();
+		}
+		return "Is Locked: " + pdc.get(new NamespacedKey(plugin, KEY_IS_LOCKED), PersistentDataType.STRING) + "\n"
+		     + "Key Name: " + pdc.get(new NamespacedKey(plugin, KEY_KEYNAME), PersistentDataType.STRING) + "\n"
+		     + "Key Material: " + pdc.get(new NamespacedKey(plugin, KEY_KEYMATERIAL), PersistentDataType.STRING) + "\n"
+		     + "Key Creator: " + keyCreator + "\n"
+		     + "Hash: " + pdc.get(new NamespacedKey(plugin, KEY_HASH), PersistentDataType.STRING) + "\n"
+		     + "Lock Owner: " + Bukkit.getOfflinePlayer(UUID.fromString(pdc.get(new NamespacedKey(plugin, KEY_LOCK_OWNER), PersistentDataType.STRING)));
+	}
 }

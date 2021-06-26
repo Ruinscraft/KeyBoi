@@ -62,7 +62,7 @@ import net.md_5.bungee.api.ChatColor;
 public class KeyListener implements Listener{
 	private KeyBoi plugin;
 	
-	private final String LOCK_SIGN_IDENTIFIER = ChatColor.DARK_GREEN + "[Key]";
+	private final String LOCK_SIGN_IDENTIFIER = ChatColor.DARK_RED + "[Key]";
 	private final String LOCK_SIGN_IDENTIFIER_NO_COLOR = "[Key]";
 	
     public KeyListener(KeyBoi plugin) {
@@ -122,6 +122,8 @@ public class KeyListener implements Listener{
         			if(dm.containerHasKeyTags(pdc)) {
         				// TODO: debug
             			player.sendMessage("(Debug) Yo! Found some KeyBoi data!");
+            			
+            			player.sendMessage(ChatColor.BLUE + dm.containerToString(pdc));
         			}
         		}
         	}

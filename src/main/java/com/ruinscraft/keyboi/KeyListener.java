@@ -137,23 +137,89 @@ public class KeyListener implements Listener{
         			if(dm.containerHasKeyTags(pdc)) {
         				// TODO: debug
             			player.sendMessage("(Debug) Yo! Found some KeyBoi data!");
-            			
             			player.sendMessage(ChatColor.BLUE + dm.containerToString(pdc));
+            			
+            			if(dm.isLocked(pdc)) {
+            				player.sendMessage(ChatColor.LIGHT_PURPLE + "(Debug) Block is locked with a key");
+            				
+            				if(playerHoldingKey(player)) {
+            					ItemStack key = player.getInventory().getItemInMainHand();
+            					
+            					if(dm.playerKeyMatchesLock(key, pdc)) {
+            						// TODO: remove debug and add checks for different blocks
+            						player.sendMessage("(Debug) Key matches!");
+            					}
+            					else {
+            						if(player.isOnline()) {
+            							player.sendMessage(ChatColor.YELLOW + "This key doesn't seem to fit the lock...");
+            						}
+            						evt.setCancelled(true);
+            					}
+            				}
+            				else {
+            					if(player.isOnline()) {
+            						player.sendMessage(ChatColor.YELLOW + "You need a " + ChatColor.BOLD + "key" + ChatColor.RESET + ChatColor.YELLOW + " to open this.");
+            					}
+            					evt.setCancelled(true);
+            				}
+            			}
         			}
         		}
         	}
         	else if(blockIsSign(clickedBlock)){
         		Sign sign = (Sign) state;
         		if(signIsKeySign(sign)) {
+        			// TODO: debug
         			if(player.isOnline()) {
-        				// TODO: debug
         				player.sendMessage("(Debug) You clicked on a KeyBoi sign");
+        			}
+        			
+        			DataManager dm = new DataManager(plugin);
+        			
+        			PersistentDataContainer pdc = sign.getPersistentDataContainer();
+        			
+        			if(dm.playerOwnsLock(player, pdc)) {
+	        			if(dm.isLocked(pdc)) {
+	        				if(player.isOnline()) {
+	        					player.sendMessage("(Debug) KeyBoi sign selected.");
+	        				}
+	        			}
+	        			else if(playerHoldingKey(player)){
+	        				ItemStack key = player.getInventory().getItemInMainHand();
+	        				
+	        				if(key != null && !key.getType().equals(Material.AIR)) {
+		        				dm.setKeyTags(player, key, sign);
+		        				
+		        				if(player.isOnline()) {
+		        					player.sendMessage(ChatColor.GREEN + "Block successfully locked with key!");
+		        				}
+	        				}
+	        			}
+        			}
+        			else {
+        				// TODO: debug
+        				player.sendMessage("(Debug) You do not own this lock/key");
         			}
         		}
         	}
         }
     }
     
+    private boolean playerHoldingKey(Player player) {
+    	ItemStack inHand = player.getInventory().getItemInMainHand();
+    	if(inHand == null || inHand.getType().equals(Material.AIR)) {
+    		return false;
+    	}
+    	else {
+	    	ItemMeta meta = inHand.getItemMeta();
+	    	PersistentDataContainer pdc = meta.getPersistentDataContainer();
+	    	
+	    	// TODO: clean this up
+	    	return pdc.has(new NamespacedKey(plugin, "keyboi-creator"), PersistentDataType.STRING)
+	    		&& meta.hasLore()
+	    		&& meta.getLore().get(0).equals(ChatColor.GOLD + "-- Key --");
+    	}
+    }
     private Sign blockHasKeySign(Block block) {
     	List<Block> surroundingBlocks = new ArrayList<Block>();
     	

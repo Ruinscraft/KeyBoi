@@ -146,7 +146,7 @@ public class KeyCommandExecutor implements CommandExecutor, TabCompleter{
 			ItemMeta meta = itemInHand.getItemMeta();
 			PersistentDataContainer pdc = meta.getPersistentDataContainer();
 			
-			NamespacedKey keycreatorKey = new NamespacedKey(plugin, "keyboi-keycreator");
+			NamespacedKey keycreatorKey = new NamespacedKey(plugin, "keyboi-creator");
     		NamespacedKey hashKey = new NamespacedKey(plugin, "keyboi-hash");
     		
 			pdc.set(keycreatorKey, PersistentDataType.STRING, caller.getUniqueId().toString());

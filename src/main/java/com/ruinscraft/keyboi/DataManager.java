@@ -44,7 +44,7 @@ public class DataManager {
 		if(key.hasItemMeta()) {
 			ItemMeta meta = key.getItemMeta();
 			PersistentDataContainer keyPdc = meta.getPersistentDataContainer();
-			NamespacedKey keycreatorKey = new NamespacedKey(plugin, "keyboi-keycreator");
+			NamespacedKey keycreatorKey = new NamespacedKey(plugin, "keyboi-creator");
 			NamespacedKey hashKey = new NamespacedKey(plugin, "keyboi-hash");
 			
 			if(meta.hasDisplayName()) {
@@ -55,14 +55,14 @@ public class DataManager {
 			}
 			
 			if(keyPdc.has(keycreatorKey, PersistentDataType.STRING)) {
-				keyCreator = pdc.get(keycreatorKey, PersistentDataType.STRING);
+				keyCreator = keyPdc.get(keycreatorKey, PersistentDataType.STRING);
 			}
 			else {
 				return false;
 			}
 			
 			if(keyPdc.has(hashKey, PersistentDataType.STRING)) {
-				hash = pdc.get(hashKey, PersistentDataType.STRING);
+				hash = keyPdc.get(hashKey, PersistentDataType.STRING);
 			}
 			else {
 				return false;
@@ -81,6 +81,7 @@ public class DataManager {
 			pdc.set(new NamespacedKey(plugin, KEY_LOCK_OWNER), PersistentDataType.STRING, keyOwner);
 		}
 		
+		s.update();
 		return true;
 	}
 	
@@ -120,6 +121,35 @@ public class DataManager {
 		     + "Key Material: " + pdc.get(new NamespacedKey(plugin, KEY_KEYMATERIAL), PersistentDataType.STRING) + "\n"
 		     + "Key Creator: " + keyCreator + "\n"
 		     + "Hash: " + pdc.get(new NamespacedKey(plugin, KEY_HASH), PersistentDataType.STRING) + "\n"
-		     + "Lock Owner: " + Bukkit.getOfflinePlayer(UUID.fromString(pdc.get(new NamespacedKey(plugin, KEY_LOCK_OWNER), PersistentDataType.STRING)));
+		     + "Lock Owner: " + Bukkit.getOfflinePlayer(UUID.fromString(pdc.get(new NamespacedKey(plugin, KEY_LOCK_OWNER), PersistentDataType.STRING))).getName();
+	}
+	
+	public boolean isLocked(PersistentDataContainer pdc) {
+		return pdc.get(new NamespacedKey(plugin, KEY_IS_LOCKED), PersistentDataType.STRING).equalsIgnoreCase("true");
+	}
+	
+	public boolean playerOwnsLock(Player player, PersistentDataContainer pdc) {
+		String ownerUUID = pdc.get(new NamespacedKey(plugin, KEY_LOCK_OWNER), PersistentDataType.STRING);
+		
+		return player.getUniqueId().toString().equals(ownerUUID);
+	}
+	
+	public boolean playerKeyMatchesLock(ItemStack key, PersistentDataContainer lock) {
+		ItemMeta keyMeta = key.getItemMeta();
+		PersistentDataContainer keyData = keyMeta.getPersistentDataContainer();
+		
+		String keyName = null;
+		String keyCreator = keyData.get(new NamespacedKey(plugin, "keyboi-creator"), PersistentDataType.STRING);
+		
+		if(keyMeta.hasDisplayName()) {
+			keyName = keyMeta.getDisplayName();
+		}
+		else {
+			keyName = key.getType().toString();
+		}
+		
+		return keyName.equals(lock.get(new NamespacedKey(plugin, KEY_KEYNAME), PersistentDataType.STRING))
+			&& key.getType().name().equals(lock.get(new NamespacedKey(plugin, KEY_KEYMATERIAL), PersistentDataType.STRING))
+			&& keyCreator.equals(lock.get(new NamespacedKey(plugin, KEY_KEYCREATOR), PersistentDataType.STRING));
 	}
 }

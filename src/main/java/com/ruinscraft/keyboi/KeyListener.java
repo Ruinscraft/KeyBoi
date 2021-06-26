@@ -23,6 +23,7 @@ import org.bukkit.block.DoubleChest;
 import org.bukkit.block.ShulkerBox;
 import org.bukkit.block.Sign;
 import org.bukkit.block.banner.Pattern;
+import org.bukkit.block.data.Bisected.Half;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.Directional;
 import org.bukkit.block.data.type.Door;
@@ -110,6 +111,20 @@ public class KeyListener implements Listener{
         	
         	if (blockIsLockable(clickedBlock)) {
         		Sign signInfo = blockHasKeySign(clickedBlock);
+        		
+        		if(blockIsDoor(clickedBlock) && signInfo == null) {
+        			Door d = (Door) clickedBlock.getBlockData();
+        			
+        			if(d.getHalf() == Half.TOP) {
+        				Block bottomHalf = clickedBlock.getRelative(BlockFace.DOWN);
+        				signInfo = blockHasKeySign(bottomHalf);
+        			}
+        			else {
+        				Block topHalf = clickedBlock.getRelative(BlockFace.UP);
+        				signInfo = blockHasKeySign(topHalf);
+        			}
+        		}
+        		
         		
         		if(signInfo != null) {
         			// TODO: debug

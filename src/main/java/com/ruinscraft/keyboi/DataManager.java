@@ -1,10 +1,12 @@
 package com.ruinscraft.keyboi;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.Sign;
 import org.bukkit.entity.Player;
@@ -16,12 +18,12 @@ import org.bukkit.persistence.PersistentDataType;
 public class DataManager {
 	public static KeyBoi plugin;
 	
-	private static final String KEY_IS_LOCKED = "keyboi-islocked";
-	private static final String KEY_KEYNAME = "keyboi-keyname";
-	private static final String KEY_KEYMATERIAL = "keyboi-keymaterial";
-	private static final String KEY_KEYCREATOR = "keyboi-keycreator";
-	private static final String KEY_HASH = "keyboi-hash";
-	private static final String KEY_LOCK_OWNER = "keyboi-lockowner";
+	public static final String KEY_IS_LOCKED = "keyboi-islocked";
+	public static final String KEY_KEYNAME = "keyboi-keyname";
+	public static final String KEY_KEYMATERIAL = "keyboi-keymaterial";
+	public static final String KEY_KEYCREATOR = "keyboi-keycreator";
+	public static final String KEY_HASH = "keyboi-hash";
+	public static final String KEY_LOCK_OWNER = "keyboi-lockowner";
 	
 	public DataManager(KeyBoi plugin) {
 		this.plugin = plugin;
@@ -135,21 +137,48 @@ public class DataManager {
 	}
 	
 	public boolean playerKeyMatchesLock(ItemStack key, PersistentDataContainer lock) {
-		ItemMeta keyMeta = key.getItemMeta();
-		PersistentDataContainer keyData = keyMeta.getPersistentDataContainer();
+		if(key == null || key.getType().equals(Material.AIR)) {
+			return false;
+		}
 		
-		String keyName = null;
-		String keyCreator = keyData.get(new NamespacedKey(plugin, "keyboi-creator"), PersistentDataType.STRING);
-		
-		if(keyMeta.hasDisplayName()) {
-			keyName = keyMeta.getDisplayName();
+		if(key.hasItemMeta()) {
+			ItemMeta keyMeta = key.getItemMeta();
+			PersistentDataContainer keyData = keyMeta.getPersistentDataContainer();
+			
+			String keyName = null;
+			String keyCreator = keyData.get(new NamespacedKey(plugin, "keyboi-creator"), PersistentDataType.STRING);
+			
+			if(keyMeta.hasDisplayName()) {
+				keyName = keyMeta.getDisplayName();
+			}
+			else {
+				keyName = key.getType().toString();
+			}
+			
+			return keyName.equals(lock.get(new NamespacedKey(plugin, KEY_KEYNAME), PersistentDataType.STRING))
+				&& key.getType().name().equals(lock.get(new NamespacedKey(plugin, KEY_KEYMATERIAL), PersistentDataType.STRING))
+				&& keyCreator.equals(lock.get(new NamespacedKey(plugin, KEY_KEYCREATOR), PersistentDataType.STRING));
 		}
 		else {
-			keyName = key.getType().toString();
+			return false;
+		}
+	}
+	
+	public HashMap<String, String> getLockKeyData(PersistentDataContainer lock) {
+		HashMap<String, String> data = new HashMap<String, String>(0);
+		
+		String keyCreator = lock.get(new NamespacedKey(plugin, KEY_KEYCREATOR), PersistentDataType.STRING);
+		
+		if(!keyCreator.equalsIgnoreCase("N/A")){
+			keyCreator = Bukkit.getOfflinePlayer(UUID.fromString(keyCreator)).getName();
 		}
 		
-		return keyName.equals(lock.get(new NamespacedKey(plugin, KEY_KEYNAME), PersistentDataType.STRING))
-			&& key.getType().name().equals(lock.get(new NamespacedKey(plugin, KEY_KEYMATERIAL), PersistentDataType.STRING))
-			&& keyCreator.equals(lock.get(new NamespacedKey(plugin, KEY_KEYCREATOR), PersistentDataType.STRING));
+		data.put(KEY_KEYNAME, lock.get(new NamespacedKey(plugin, KEY_KEYNAME), PersistentDataType.STRING));
+		data.put(KEY_KEYMATERIAL, lock.get(new NamespacedKey(plugin, KEY_KEYMATERIAL), PersistentDataType.STRING));
+		data.put(KEY_KEYCREATOR, keyCreator);
+		data.put(KEY_HASH, lock.get(new NamespacedKey(plugin, KEY_HASH), PersistentDataType.STRING));
+		data.put(KEY_LOCK_OWNER, lock.get(new NamespacedKey(plugin, KEY_LOCK_OWNER), PersistentDataType.STRING));
+		
+		return data;
 	}
 }

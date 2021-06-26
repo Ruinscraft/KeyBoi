@@ -26,7 +26,10 @@ import org.bukkit.block.banner.Pattern;
 import org.bukkit.block.data.Bisected.Half;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.Directional;
+import org.bukkit.block.data.Openable;
 import org.bukkit.block.data.type.Door;
+import org.bukkit.block.data.type.Gate;
+import org.bukkit.block.data.type.TrapDoor;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -66,6 +69,13 @@ public class KeyListener implements Listener{
 	private final String LOCK_SIGN_IDENTIFIER = ChatColor.DARK_RED + "[Key]";
 	private final String LOCK_SIGN_IDENTIFIER_NO_COLOR = "[Key]";
 	
+	private final String MSG_KEY_SIGN_PLACED = ChatColor.GREEN + "Key sign placed! Use a key on the sign to set the lock.";
+	private final String MSG_BLOCK_SUCCESSFULLY_LOCKED = ChatColor.GREEN + "Block successfully locked with key!";
+	private final String MSG_DISPLAY_KEY_INFO = ChatColor.GREEN + "This block is locked with a key called %s (%s) created by %s.";
+	private final String MSG_ERROR_NEED_KEY = ChatColor.YELLOW + "You need a " + ChatColor.BOLD + "key" + ChatColor.RESET + ChatColor.YELLOW + " to open this.";
+	private final String MSG_ERROR_UNABLE_TO_LOCK = ChatColor.RED + "Unable to set key values for lock.";
+	private final String MSG_ERROR_WRONG_KEY = ChatColor.YELLOW + "This key doesn't seem to fit the lock...";
+	
     public KeyListener(KeyBoi plugin) {
     	this.plugin = plugin;
     }
@@ -85,12 +95,12 @@ public class KeyListener implements Listener{
 	    		
 	    		if(dm.setNewSignKeyTags(player, s)){
 		    		if(player.isOnline()) {
-		    			player.sendMessage(ChatColor.GREEN + "Block locked with key sign! Right-click the sign to set the key.");
+		    			player.sendMessage(MSG_KEY_SIGN_PLACED);
 		    		}
 	    		}
 	    		else {
 	    			if(player.isOnline()) {
-	    				player.sendMessage(ChatColor.RED + "Unable to set key values for lock.");
+	    				player.sendMessage(MSG_ERROR_UNABLE_TO_LOCK);
 	    			}
 	    		}
 	    	}
@@ -127,40 +137,46 @@ public class KeyListener implements Listener{
         		
         		
         		if(signInfo != null) {
-        			// TODO: debug
-        			player.sendMessage("(Debug) Found a KeyBoi sign attached to block");
-        			
         			DataManager dm = new DataManager(plugin);
         			
         			PersistentDataContainer pdc = signInfo.getPersistentDataContainer();
         			
         			if(dm.containerHasKeyTags(pdc)) {
-        				// TODO: debug
-            			player.sendMessage("(Debug) Yo! Found some KeyBoi data!");
-            			player.sendMessage(ChatColor.BLUE + dm.containerToString(pdc));
-            			
             			if(dm.isLocked(pdc)) {
-            				player.sendMessage(ChatColor.LIGHT_PURPLE + "(Debug) Block is locked with a key");
-            				
-            				if(playerHoldingKey(player)) {
+            				evt.setCancelled(true);
+            				if(playerHoldingKey(player) || playerIsAdmin(player)) {
             					ItemStack key = player.getInventory().getItemInMainHand();
             					
-            					if(dm.playerKeyMatchesLock(key, pdc)) {
-            						// TODO: remove debug and add checks for different blocks
-            						player.sendMessage("(Debug) Key matches!");
+            					if(dm.playerKeyMatchesLock(key, pdc) || playerIsAdmin(player)) {
+            						if(blockIsDoor(clickedBlock) || blockIsTrapdoor(clickedBlock) || blockIsGate(clickedBlock)) {
+            							Openable open = (Openable) state.getBlockData();
+            							if(open.isOpen()) {
+            								open.setOpen(false);
+            							}
+            							else {
+            								open.setOpen(true);
+            							}
+            							
+            							state.setBlockData(open);
+            						}
+            						else if(blockIsStorage(clickedBlock)) {
+            							Container container = (Container) state;
+            							
+            							player.openInventory(container.getInventory());
+            						}
+            						
+            						state.update();
             					}
             					else {
             						if(player.isOnline()) {
-            							player.sendMessage(ChatColor.YELLOW + "This key doesn't seem to fit the lock...");
+            							player.sendMessage(MSG_ERROR_WRONG_KEY);
             						}
-            						evt.setCancelled(true);
             					}
             				}
             				else {
             					if(player.isOnline()) {
-            						player.sendMessage(ChatColor.YELLOW + "You need a " + ChatColor.BOLD + "key" + ChatColor.RESET + ChatColor.YELLOW + " to open this.");
+            						player.sendMessage(MSG_ERROR_NEED_KEY);
             					}
-            					evt.setCancelled(true);
             				}
             			}
         			}
@@ -169,19 +185,15 @@ public class KeyListener implements Listener{
         	else if(blockIsSign(clickedBlock)){
         		Sign sign = (Sign) state;
         		if(signIsKeySign(sign)) {
-        			// TODO: debug
-        			if(player.isOnline()) {
-        				player.sendMessage("(Debug) You clicked on a KeyBoi sign");
-        			}
-        			
         			DataManager dm = new DataManager(plugin);
         			
         			PersistentDataContainer pdc = sign.getPersistentDataContainer();
         			
-        			if(dm.playerOwnsLock(player, pdc)) {
+        			if(dm.playerOwnsLock(player, pdc) || playerIsAdmin(player)) {
 	        			if(dm.isLocked(pdc)) {
 	        				if(player.isOnline()) {
-	        					player.sendMessage("(Debug) KeyBoi sign selected.");
+	        					HashMap<String, String> keyData = dm.getLockKeyData(pdc);
+	        					player.sendMessage(String.format(MSG_DISPLAY_KEY_INFO, prettyPrint(keyData.get(DataManager.KEY_KEYNAME)), prettyPrint(keyData.get(DataManager.KEY_KEYMATERIAL)), keyData.get(DataManager.KEY_KEYCREATOR)));
 	        				}
 	        			}
 	        			else if(playerHoldingKey(player)){
@@ -191,18 +203,18 @@ public class KeyListener implements Listener{
 		        				dm.setKeyTags(player, key, sign);
 		        				
 		        				if(player.isOnline()) {
-		        					player.sendMessage(ChatColor.GREEN + "Block successfully locked with key!");
+		        					player.sendMessage(MSG_BLOCK_SUCCESSFULLY_LOCKED);
 		        				}
 	        				}
 	        			}
         			}
-        			else {
-        				// TODO: debug
-        				player.sendMessage("(Debug) You do not own this lock/key");
-        			}
         		}
         	}
         }
+    }
+    
+    private boolean playerIsAdmin(Player player) {
+    	return player.hasPermission("keyboi.admin");
     }
     
     private boolean playerHoldingKey(Player player) {
@@ -220,6 +232,7 @@ public class KeyListener implements Listener{
 	    		&& meta.getLore().get(0).equals(ChatColor.GOLD + "-- Key --");
     	}
     }
+    
     private Sign blockHasKeySign(Block block) {
     	List<Block> surroundingBlocks = new ArrayList<Block>();
     	
@@ -243,42 +256,6 @@ public class KeyListener implements Listener{
     	return null;
     }
     
-    private void lockBlock(Player player, ItemStack key, Sign s) {
-    	DataManager dm = new DataManager(plugin);
-    	
-    	if(dm.setKeyTags(player, key, s)) {
-    		if(player.isOnline()) {
-    			player.sendMessage("Block successfully locked with key!");
-    		}
-    	}
-    	else {
-    		if(player.isOnline()) {
-    			player.sendMessage("Unable to lock block with key");
-    		}
-    	}
-    }
-    
-
-    private boolean stateHasKeyMetadata(BlockState state) {
-    	return state.hasMetadata("keyboi-locked")
-    		&& state.hasMetadata("keyboi-keyname")
-    		&& state.hasMetadata("keyboi-keymaterial")
-    		&& state.hasMetadata("keyboi-keycreator")
-    		&& state.hasMetadata("keyboi-hash");
-    		//&& state.hasMetadata("keyboi-whoplacedblock");
-    }
-    
-    private List<MetadataValue> stateGetKeyMetadata(BlockState state) {
-    	List<MetadataValue> keymeta = new ArrayList<MetadataValue>();
-    	
-    	keymeta.add(state.getMetadata("keyboi-locked").get(0));
-    	keymeta.add(state.getMetadata("keyboi-keyname").get(0));
-    	keymeta.add(state.getMetadata("keyboi-keymaterial").get(0));
-    	keymeta.add(state.getMetadata("keyboi-keycreator").get(0));
-    	//keymeta.add(state.getMetadata("keyboi-whoplacedblock").get(0));
-    	
-    	return keymeta;
-    }
     private boolean blockIsLockable(Block block) {
     	return blockIsDoor(block) || blockIsTrapdoor(block) || blockIsGate(block) || blockIsStorage(block);
     }
@@ -357,8 +334,8 @@ public class KeyListener implements Listener{
     	return lines[0].equalsIgnoreCase(LOCK_SIGN_IDENTIFIER_NO_COLOR);
     }
     
-    private String materialPrettyPrint(Material material) {
-    	String[] words = material.toString().split("_");
+    private String prettyPrint(String str) {
+    	String[] words = str.split("_");
     	String output = "";
     	
     	for( String word : words) {
@@ -368,37 +345,6 @@ public class KeyListener implements Listener{
     	return output;
     }
     
-	private String truncateText(String message) {
-    	if(message.length() >= 38) {
-    		return message.substring(0, 34) + "...";
-    	}
-    	else {
-    		return message;
-    	}
-    }
-    
-    private String prettyPrint(String message) {
-    	String[] words = message.split("_");
-    	String  output = "";
-    	
-    	for( String word : words) {
-    		output += word.substring(0,1).toUpperCase() + word.substring(1).toLowerCase() + " ";
-    	}
-    	output = output.trim();
-    	return output;
-    }
-
-    /**
-     * Sends an error message to the player.
-     * @param p Player to send message to
-     * @param message Message to output
-     */
-    private void sendError(Player player, String message) {
-    	if(player.isOnline()) {
-    		player.sendMessage(ChatColor.RED + message);
-    	}
-    }
-
     private boolean itemIsFinishedBook(ItemStack item) {
     	return item != null && item.getType().equals(XMaterial.WRITTEN_BOOK.parseMaterial());
     }

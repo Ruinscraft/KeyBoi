@@ -62,10 +62,40 @@ import net.md_5.bungee.api.ChatColor;
 public class KeyListener implements Listener{
 	private KeyBoi plugin;
 	
+	private final String LOCK_SIGN_IDENTIFIER = ChatColor.DARK_GREEN + "[Key]";
+	private final String LOCK_SIGN_IDENTIFIER_NO_COLOR = "[Key]";
+	
     public KeyListener(KeyBoi plugin) {
     	this.plugin = plugin;
     }
-
+    
+    @EventHandler
+    public void onSignChangeEvent(SignChangeEvent evt) {
+    	Player player = evt.getPlayer();
+    	Block block = evt.getBlock();
+    	
+    	if(block.getState() instanceof Sign) {
+	    	if(validateKeySignEntry(evt.getLines())) {
+	    		evt.setLine(0, LOCK_SIGN_IDENTIFIER);
+	    		
+	    		Sign s = (Sign) block.getState();
+	    		
+	    		DataManager dm = new DataManager(plugin);
+	    		
+	    		if(dm.setNewSignKeyTags(player, s)){
+		    		if(player.isOnline()) {
+		    			player.sendMessage(ChatColor.GREEN + "Block locked with key sign! Right-click the sign to set the key.");
+		    		}
+	    		}
+	    		else {
+	    			if(player.isOnline()) {
+	    				player.sendMessage(ChatColor.RED + "Unable to set key values for lock.");
+	    			}
+	    		}
+	    	}
+    	}
+    }
+    
     /**
      * This function handles all Player interactions with a locked blocks.
      * @param evt - called Player interact event
@@ -76,80 +106,76 @@ public class KeyListener implements Listener{
 
         if (evt.getAction() == Action.RIGHT_CLICK_BLOCK) {
         	Block clickedBlock = evt.getClickedBlock();
+        	BlockState state = clickedBlock.getState();
         	
         	if (blockIsLockable(clickedBlock)) {
-        		BlockState state = clickedBlock.getState();
-        		BlockData data = clickedBlock.getBlockData();
+        		Sign signInfo = blockHasKeySign(clickedBlock);
         		
-        		if(stateHasKeyMetadata(state)) {
-        			List<MetadataValue> meta = stateGetKeyMetadata(state);
+        		if(signInfo != null) {
+        			// TODO: debug
+        			player.sendMessage("(Debug) Found a KeyBoi sign attached to block");
         			
-        			player.sendMessage("(Debug) Block has KeyBoi data");
-        			for(MetadataValue m : meta) {
-        				player.sendMessage(m.value().toString());
+        			DataManager dm = new DataManager(plugin);
+        			
+        			PersistentDataContainer pdc = signInfo.getPersistentDataContainer();
+        			
+        			if(dm.containerHasKeyTags(pdc)) {
+        				// TODO: debug
+            			player.sendMessage("(Debug) Yo! Found some KeyBoi data!");
         			}
         		}
-        		// TODO: debug values
-        		else {
-        			ItemStack key = new ItemStack(Material.STICK);
-        			ItemMeta keyMeta = key.getItemMeta();
-        			PersistentDataContainer keyPdc = keyMeta.getPersistentDataContainer();
-        			NamespacedKey keycreatorKey = new NamespacedKey(plugin, "keyboi-keycreator");
-            		NamespacedKey hashKey = new NamespacedKey(plugin, "keyboi-hash");
-            		
-        			keyPdc.set(keycreatorKey, PersistentDataType.STRING, player.getUniqueId().toString());
-        			keyPdc.set(hashKey, PersistentDataType.STRING, "fakehash");
-        			
-        			keyMeta.setDisplayName("Example Key");
-        			key.setItemMeta(keyMeta);
-        			
-        			lockBlock(player, key, state);
-        			if(state.update()) {
-        				player.sendMessage("(Debug) Block has been locked with debug key");
+        	}
+        	else if(blockIsSign(clickedBlock)){
+        		Sign sign = (Sign) state;
+        		if(signIsKeySign(sign)) {
+        			if(player.isOnline()) {
+        				// TODO: debug
+        				player.sendMessage("(Debug) You clicked on a KeyBoi sign");
         			}
         		}
-        		
         	}
         }
     }
     
-    private void lockBlock(Player player, ItemStack key, BlockState state) {
-    	String keyname = "";
-    	String keycreator = null;
-    	String hash = null;
+    private Sign blockHasKeySign(Block block) {
+    	List<Block> surroundingBlocks = new ArrayList<Block>();
     	
-    	if(key.hasItemMeta()) {
-    		ItemMeta meta = key.getItemMeta();
-    		PersistentDataContainer pdc = meta.getPersistentDataContainer();
-    		NamespacedKey keycreatorKey = new NamespacedKey(plugin, "keyboi-keycreator");
-    		NamespacedKey hashKey = new NamespacedKey(plugin, "keyboi-hash");
-    		
-    		if(meta.hasDisplayName()) {
-    			keyname = key.getItemMeta().getDisplayName();
-    		}
-    		else {
-    			keyname = key.getType().toString();
-    		}
-    		
-    		if(pdc.has(keycreatorKey, PersistentDataType.STRING)) {
-    			keycreator = pdc.get(keycreatorKey, PersistentDataType.STRING);
-    		}
-    		
-    		if(pdc.has(hashKey, PersistentDataType.STRING)) {
-    			hash = pdc.get(hashKey, PersistentDataType.STRING);
+    	surroundingBlocks.add(block.getRelative(BlockFace.NORTH));
+    	surroundingBlocks.add(block.getRelative(BlockFace.SOUTH));
+    	surroundingBlocks.add(block.getRelative(BlockFace.EAST));
+    	surroundingBlocks.add(block.getRelative(BlockFace.WEST));
+    	surroundingBlocks.add(block.getRelative(BlockFace.UP));
+    	surroundingBlocks.add(block.getRelative(BlockFace.DOWN));
+    	
+    	for(Block b : surroundingBlocks) {
+    		if(blockIsSign(b)) {
+    			Sign s = (Sign) b.getState();
+    			
+    			if(signIsKeySign(s)) {
+    				return s;
+    			}
     		}
     	}
-    	state.setMetadata("keyboi-locked", new FixedMetadataValue(plugin, true));
-    	state.setMetadata("keyboi-keyname", new FixedMetadataValue(plugin, keyname));
-    	state.setMetadata("keyboi-keymaterial", new FixedMetadataValue(plugin, key.getType().toString()));
-    	state.setMetadata("keyboi-keycreator", new FixedMetadataValue(plugin, keycreator));
-    	state.setMetadata("keyboi-hash", new FixedMetadataValue(plugin, hash));
     	
-    	if(state.update()) {
-    		player.sendMessage("Block successfully locked");
+    	return null;
+    }
+    
+    private void lockBlock(Player player, ItemStack key, Sign s) {
+    	DataManager dm = new DataManager(plugin);
+    	
+    	if(dm.setKeyTags(player, key, s)) {
+    		if(player.isOnline()) {
+    			player.sendMessage("Block successfully locked with key!");
+    		}
+    	}
+    	else {
+    		if(player.isOnline()) {
+    			player.sendMessage("Unable to lock block with key");
+    		}
     	}
     }
     
+
     private boolean stateHasKeyMetadata(BlockState state) {
     	return state.hasMetadata("keyboi-locked")
     		&& state.hasMetadata("keyboi-keyname")
@@ -173,7 +199,20 @@ public class KeyListener implements Listener{
     private boolean blockIsLockable(Block block) {
     	return blockIsDoor(block) || blockIsTrapdoor(block) || blockIsGate(block) || blockIsStorage(block);
     }
-
+    
+    private boolean blockIsSign(Block block) {
+    	return block != null && (
+    		    block.getType().equals(Material.ACACIA_WALL_SIGN)
+    		 || block.getType().equals(Material.BIRCH_WALL_SIGN)
+    		 || block.getType().equals(Material.CRIMSON_WALL_SIGN)
+    		 || block.getType().equals(Material.DARK_OAK_WALL_SIGN)
+    		 || block.getType().equals(Material.JUNGLE_WALL_SIGN)
+    		 || block.getType().equals(Material.OAK_WALL_SIGN)
+    		 || block.getType().equals(Material.SPRUCE_WALL_SIGN)
+    		 || block.getType().equals(Material.WARPED_WALL_SIGN)
+    		 );
+    }
+    
 	private boolean blockIsDoor(Block block) {
 		return block != null && (
     		    block.getType().equals(Material.ACACIA_DOOR)
@@ -226,6 +265,13 @@ public class KeyListener implements Listener{
     		 || block.getState() instanceof DoubleChest
     		 || block.getState() instanceof Barrel
     		 );
+    }
+    
+    private boolean signIsKeySign(Sign s) {
+    	return s.getLine(0).equalsIgnoreCase(LOCK_SIGN_IDENTIFIER);
+    }
+    private boolean validateKeySignEntry(String[] lines) {
+    	return lines[0].equalsIgnoreCase(LOCK_SIGN_IDENTIFIER_NO_COLOR);
     }
     
     private String materialPrettyPrint(Material material) {

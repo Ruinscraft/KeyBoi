@@ -239,7 +239,7 @@ public class DataManager {
 	    	// TODO: clean this up
 	    	return pdc.has(new NamespacedKey(plugin, KEY_KEYCREATOR), PersistentDataType.STRING)
 	    		&& meta.hasLore()
-	    		&& meta.getLore().get(0).equals(ChatColor.GOLD + "-- Key --");
+	    		&& meta.getLore().get(0).equals(LORE_LINE1);
 		}
 		
 		return false;
@@ -253,13 +253,29 @@ public class DataManager {
 			ItemMeta meta = item.getItemMeta();
 			PersistentDataContainer pdc = meta.getPersistentDataContainer();
 			
+			// store the itemstack's current quantity and set to one
+			// this is to fix different quantity stacks from having different key hashes
+			int oldQuantity = item.getAmount();
+			item.setAmount(1);
+			
 			List<String> loreList = new ArrayList<String>();
+			List<String> oldLore;
+			
+			if(meta.hasLore()) {
+				oldLore = meta.getLore();
+			}
+			else {
+				oldLore = new ArrayList<String>();
+			}
+			
 			loreList.add(LORE_LINE1);
 			loreList.add(LORE_LINE2);
 			loreList.add(LORE_LINE3);
 			loreList.add(LORE_LINE4);
 			loreList.add("");
 			loreList.add(String.format(LORE_LINE5, owner.getName()));
+			
+			loreList.addAll(oldLore);
 			meta.setLore(loreList);
 			
 			if(itemIsFinishedBook(item)) {
@@ -270,6 +286,9 @@ public class DataManager {
 			
 			pdc.set(new NamespacedKey(plugin, KEY_KEYCREATOR), PersistentDataType.STRING, owner.getUniqueId().toString());
 			pdc.set(new NamespacedKey(plugin, KEY_HASH), PersistentDataType.STRING, DataManager.computeMD5Hash(item));
+			
+			// restore item's original quantity
+			item.setAmount(oldQuantity);
 			
 			return item.setItemMeta(meta);
 		}

@@ -25,7 +25,10 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.inventory.DoubleChestInventory;
 import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataContainer;
 
@@ -75,6 +78,7 @@ public class KeyListener implements Listener{
     	
     	if(block.getState() instanceof Sign) {
 	    	if(validateKeySignEntry(evt.getLines())) {
+	    		
 	    		evt.setLine(0, LOCK_SIGN_IDENTIFIER);
 	    		
 	    		Sign s = (Sign) block.getState();
@@ -133,6 +137,23 @@ public class KeyListener implements Listener{
         			}
         		}
         		
+        		if(blockIsStorage(clickedBlock) && signInfo == null) {
+        			if(state instanceof Chest) {
+        				Chest chest = (Chest) state;
+        				Inventory inv = chest.getInventory();
+        				
+        				if(inv instanceof DoubleChestInventory) {
+        					player.sendMessage("(Debug) Block is double chest");
+        					DoubleChest dc = (DoubleChest) inv.getHolder();
+        					
+	        				signInfo = blockHasKeySign(dc.getLeftSide().getInventory().getLocation().getBlock());
+	        				if(signInfo == null) {
+	        					signInfo = blockHasKeySign(dc.getLeftSide().getInventory().getLocation().getBlock());
+	        				}
+        				}
+        			}
+        		}
+        		
         		
         		if(signInfo != null) {
         			DataManager dm = new DataManager(plugin);
@@ -142,6 +163,12 @@ public class KeyListener implements Listener{
         			if(dm.containerHasKeyTags(pdc)) {
             			if(dm.isLocked(pdc)) {
             				evt.setCancelled(true);
+            				
+            				// if player is admin, cancel any key checking
+            				if(playerIsAdmin(player)) {
+            					evt.setCancelled(false);
+            					return;
+            				}
             				
             				// partial fix for iron doors
             				if(evt.getHand() == EquipmentSlot.OFF_HAND){
@@ -154,10 +181,10 @@ public class KeyListener implements Listener{
             					return;
             				}
             				
-            				if(playerHoldingKey(player) || playerIsAdmin(player)) {
+            				if(playerHoldingKey(player)) {
             					ItemStack key = player.getInventory().getItemInMainHand();
             					
-            					if(dm.playerKeyMatchesLock(key, pdc) || playerIsAdmin(player)) {
+            					if(dm.playerKeyMatchesLock(key, pdc)) {
             						if(blockIsDoor(clickedBlock) || blockIsTrapdoor(clickedBlock) || blockIsGate(clickedBlock)) {
             							Openable open = (Openable) state.getBlockData();
             							if(open.isOpen()) {

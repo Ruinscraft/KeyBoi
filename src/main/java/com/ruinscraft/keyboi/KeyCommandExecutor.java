@@ -4,8 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.md_5.bungee.api.ChatColor;
-import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -13,20 +11,20 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
-import org.bukkit.inventory.meta.BookMeta;
-import org.bukkit.inventory.meta.BookMeta.Generation;
-import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.persistence.PersistentDataContainer;
-import org.bukkit.persistence.PersistentDataType;
 
 public class KeyCommandExecutor implements CommandExecutor, TabCompleter{
+	
+
 	private final KeyBoi plugin;
 	
 	private final String PLUGIN_BANNER = ChatColor.GOLD + "---------------[ KeyBoi ]---------------";
 	
 	private final String MSG_SUCCESSFULLY_CREATED_KEY = ChatColor.GREEN + "Successfully created %d key(s)!";
+	private final String MSG_REMOVED_KEY_DATA_FROM_ITEM = ChatColor.YELLOW + "Removed key information from item(s)";
 	//private final String MSG_ERROR_NO_PERMISSION = ChatColor.RED + "You do not have permission to use that command.";
-	private final String MSG_ERROR_NO_ITEM_IN_HAND = ChatColor.RED + "You need to hold an item before creating a key.";
+	private final String MSG_ERROR_NO_ITEM_IN_HAND = ChatColor.RED + "You need to hold an item before creating a key";
+	private final String MSG_ERROR_CANNOT_MAKE_KEY = ChatColor.RED + "Unable to make key from item";
+	private final String MSG_ERROR_ITEM_NOT_KEY = ChatColor.RED + "This item is not a key";
 	
 	private final List<String> tabOptions;
 	private final List<String> adminTabOptions;
@@ -39,6 +37,7 @@ public class KeyCommandExecutor implements CommandExecutor, TabCompleter{
 		this.tutorialText = new ArrayList<String>();
 
 		tabOptions.add("create");
+		tabOptions.add("remove");
 		tabOptions.add("tutorial");
 		
 		tutorialText.add(ChatColor.GOLD + "--- How to create a key ---");
@@ -65,6 +64,9 @@ public class KeyCommandExecutor implements CommandExecutor, TabCompleter{
 			switch(args[0].toLowerCase()){
 				case "create":
 					createKey(player);
+					break;
+				case "remove":
+					removeKey(player);
 					break;
 				case "tutorial":
 					showTutorial(player);
@@ -109,6 +111,7 @@ public class KeyCommandExecutor implements CommandExecutor, TabCompleter{
 	private void showHelp(Player player) {
 		String[] commandHelpBase = {
 			ChatColor.DARK_AQUA + "  /key" + ChatColor.AQUA + " create" + ChatColor.GRAY + ": Creates key(s) from a stack of items",
+			ChatColor.DARK_AQUA + "  /key" + ChatColor.AQUA + " remove" + ChatColor.GRAY + ": Removes key information from a stack of items",
 			ChatColor.DARK_AQUA + "  /key" + ChatColor.AQUA + " tutorial" + ChatColor.GRAY + ": How to create a KeyBoi lock",
 		};
 		
@@ -127,43 +130,34 @@ public class KeyCommandExecutor implements CommandExecutor, TabCompleter{
 	}
 
 	private void createKey(Player caller) {
-		PlayerInventory callerInventory = caller.getInventory();
-		ItemStack itemInHand = callerInventory.getItemInMainHand();
-		if(itemInHand != null && !itemInHand.getType().equals(Material.AIR)) {
-			
-			ItemMeta meta = itemInHand.getItemMeta();
-			PersistentDataContainer pdc = meta.getPersistentDataContainer();
-			
-			NamespacedKey keycreatorKey = new NamespacedKey(plugin, "keyboi-creator");
-    		NamespacedKey hashKey = new NamespacedKey(plugin, "keyboi-hash");
-    		
-			List<String> loreList = new ArrayList<String>();
-			loreList.add(ChatColor.GOLD + "-- Key --");
-			loreList.add(ChatColor.GRAY + "This item may open");
-			loreList.add(ChatColor.GRAY + "a locked door or chest");
-			loreList.add(ChatColor.GRAY + "somewhere in the world...");
-			loreList.add("");
-			loreList.add(ChatColor.GRAY + "Creator: " + caller.getName());
-			meta.setLore(loreList);
-			
-			if(itemIsFinishedBook(itemInHand)) {
-				BookMeta bookmeta = (BookMeta) meta;
-				bookmeta.setGeneration(Generation.TATTERED);
-				itemInHand.setItemMeta(bookmeta);
+		if(caller.isOnline()) {
+			PlayerInventory callerInventory = caller.getInventory();
+			ItemStack itemInHand = callerInventory.getItemInMainHand();
+			if(!DataManager.itemIsAir(itemInHand)) {
+				if(DataManager.addKeyDataToItem(plugin, caller, itemInHand)) {	
+					caller.sendMessage(String.format(MSG_SUCCESSFULLY_CREATED_KEY, itemInHand.getAmount()));
+				}
+				else {
+					caller.sendMessage(MSG_ERROR_CANNOT_MAKE_KEY);
+				}
 			}
-			
-			pdc.set(keycreatorKey, PersistentDataType.STRING, caller.getUniqueId().toString());
-			pdc.set(hashKey, PersistentDataType.STRING, DataManager.computeMD5Hash(itemInHand));
-			
-			itemInHand.setItemMeta(meta);
-			
-			if(caller.isOnline()) {
-				caller.sendMessage(String.format(MSG_SUCCESSFULLY_CREATED_KEY, itemInHand.getAmount()));
+			else {
+				caller.sendMessage(MSG_ERROR_NO_ITEM_IN_HAND);
 			}
 		}
-		else {
-			if(caller.isOnline()) {
-				caller.sendMessage(MSG_ERROR_NO_ITEM_IN_HAND);
+	}
+	
+	private void removeKey(Player caller) {
+		if(caller.isOnline()) {
+			ItemStack key = caller.getInventory().getItemInMainHand();
+			
+			if(DataManager.itemIsKey(plugin, key)) {
+				DataManager.removeKeyDataFromItem(plugin, key);
+				
+				caller.sendMessage(MSG_REMOVED_KEY_DATA_FROM_ITEM);
+			}
+			else {
+				caller.sendMessage(MSG_ERROR_ITEM_NOT_KEY);
 			}
 		}
 	}
@@ -175,8 +169,4 @@ public class KeyCommandExecutor implements CommandExecutor, TabCompleter{
 			}
 		}
 	}
-	
-	private boolean itemIsFinishedBook(ItemStack item) {
-    	return item != null && item.getType().equals(Material.WRITTEN_BOOK);
-    }
 }

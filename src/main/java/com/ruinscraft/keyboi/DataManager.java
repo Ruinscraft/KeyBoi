@@ -3,8 +3,10 @@ package com.ruinscraft.keyboi;
 import java.io.ByteArrayOutputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.List;
 import java.util.UUID;
 
 import org.bukkit.Bukkit;
@@ -15,9 +17,12 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.BookMeta.Generation;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.util.io.BukkitObjectOutputStream;
+
+import net.md_5.bungee.api.ChatColor;
 
 public class DataManager {
 	public KeyBoi plugin;
@@ -28,6 +33,12 @@ public class DataManager {
 	public static final String KEY_KEYCREATOR = "keyboi-keycreator";
 	public static final String KEY_HASH = "keyboi-hash";
 	public static final String KEY_LOCK_OWNER = "keyboi-lockowner";
+
+	public static final String LORE_LINE1 = ChatColor.GOLD + "-- Key --";
+	public static final String LORE_LINE2 = ChatColor.GRAY + "This item may open";
+	public static final String LORE_LINE3 = ChatColor.GRAY + "a locked door or chest";
+	public static final String LORE_LINE4 = ChatColor.GRAY + "somewhere in the world...";
+	public static final String LORE_LINE5 = ChatColor.GRAY + "Creator: %s";
 	
 	public DataManager(KeyBoi plugin) {
 		this.plugin = plugin;
@@ -50,8 +61,8 @@ public class DataManager {
 		if(key.hasItemMeta()) {
 			ItemMeta meta = key.getItemMeta();
 			PersistentDataContainer keyPdc = meta.getPersistentDataContainer();
-			NamespacedKey keycreatorKey = new NamespacedKey(plugin, "keyboi-creator");
-			NamespacedKey hashKey = new NamespacedKey(plugin, "keyboi-hash");
+			NamespacedKey keycreatorKey = new NamespacedKey(plugin, KEY_KEYCREATOR);
+			NamespacedKey hashKey = new NamespacedKey(plugin, KEY_HASH);
 			
 			if(meta.hasDisplayName()) {
 				keyName = key.getItemMeta().getDisplayName();
@@ -148,7 +159,7 @@ public class DataManager {
 	}
 	
 	public boolean playerKeyMatchesLock(ItemStack key, PersistentDataContainer lock) {
-		if(key == null || key.getType().equals(Material.AIR)) {
+		if(itemIsAir(key)) {
 			return false;
 		}
 		
@@ -157,8 +168,8 @@ public class DataManager {
 			PersistentDataContainer keyData = keyMeta.getPersistentDataContainer();
 			
 			String keyName = null;
-			String keyCreator = keyData.get(new NamespacedKey(plugin, "keyboi-creator"), PersistentDataType.STRING);
-			String hash = keyData.get(new NamespacedKey(plugin, "keyboi-hash"), PersistentDataType.STRING);
+			String keyCreator = keyData.get(new NamespacedKey(plugin, KEY_KEYCREATOR), PersistentDataType.STRING);
+			String hash = keyData.get(new NamespacedKey(plugin, KEY_HASH), PersistentDataType.STRING);
 			
 			if(keyCreator == null || hash == null) {
 				return false;
@@ -205,6 +216,110 @@ public class DataManager {
 		
 		return data;
 	}
+	
+	public static boolean itemIsKey(KeyBoi plugin, ItemStack item) {
+		if(itemIsAir(item)) {
+			return false;
+		}
+		else if(item.hasItemMeta()) {
+	    	ItemMeta meta = item.getItemMeta();
+	    	PersistentDataContainer pdc = meta.getPersistentDataContainer();
+	    	
+	    	// TODO: clean this up
+	    	return pdc.has(new NamespacedKey(plugin, KEY_KEYCREATOR), PersistentDataType.STRING)
+	    		&& meta.hasLore()
+	    		&& meta.getLore().get(0).equals(ChatColor.GOLD + "-- Key --");
+		}
+		
+		return false;
+    }
+	
+	public static boolean addKeyDataToItem(KeyBoi plugin, Player owner, ItemStack item) {
+		if(itemIsAir(item)){
+			return false;
+		}
+		else {
+			ItemMeta meta = item.getItemMeta();
+			PersistentDataContainer pdc = meta.getPersistentDataContainer();
+			
+			List<String> loreList = new ArrayList<String>();
+			loreList.add(LORE_LINE1);
+			loreList.add(LORE_LINE2);
+			loreList.add(LORE_LINE3);
+			loreList.add(LORE_LINE4);
+			loreList.add("");
+			loreList.add(String.format(LORE_LINE5, owner.getName()));
+			meta.setLore(loreList);
+			
+			if(itemIsFinishedBook(item)) {
+				BookMeta bookmeta = (BookMeta) meta;
+				bookmeta.setGeneration(Generation.TATTERED);
+				item.setItemMeta(bookmeta);
+			}
+			
+			pdc.set(new NamespacedKey(plugin, KEY_KEYCREATOR), PersistentDataType.STRING, owner.getUniqueId().toString());
+			pdc.set(new NamespacedKey(plugin, KEY_HASH), PersistentDataType.STRING, DataManager.computeMD5Hash(item));
+			
+			return item.setItemMeta(meta);
+		}
+	}
+	
+	public static boolean removeKeyDataFromItem(KeyBoi plugin, ItemStack item) {
+		if(itemIsKey(plugin, item)) {
+			ItemMeta meta = item.getItemMeta();
+			PersistentDataContainer pdc = meta.getPersistentDataContainer();
+			String owner = pdc.get(new NamespacedKey(plugin, KEY_KEYCREATOR), PersistentDataType.STRING);
+			
+			// remove tags associated with keys
+			pdc.remove(new NamespacedKey(plugin, KEY_KEYCREATOR));
+			pdc.remove(new NamespacedKey(plugin, KEY_HASH));
+			
+			// remove key associated lore
+			if(meta.hasLore()) {
+				List<String> lore = meta.getLore();
+				
+				if(lore.contains(LORE_LINE1)) {
+					lore.remove(lore.lastIndexOf(LORE_LINE1));
+				}
+				
+				if(lore.contains(LORE_LINE2)) {
+					lore.remove(lore.lastIndexOf(LORE_LINE2));
+				}
+				
+				if(lore.contains(LORE_LINE3)) {
+					lore.remove(lore.lastIndexOf(LORE_LINE3));
+				}
+				
+				if(lore.contains(LORE_LINE4)) {
+					lore.remove(lore.lastIndexOf(LORE_LINE4));
+				}
+				
+				String lore5 = String.format(LORE_LINE5, Bukkit.getOfflinePlayer(UUID.fromString(owner)).getName());
+				
+				if(lore.contains(lore5)) {
+					lore.remove(lore.lastIndexOf(lore5));
+				}
+				
+				if(lore.contains("")) {
+					lore.remove(lore.lastIndexOf(""));
+				}
+				
+				meta.setLore(lore);
+				
+				return item.setItemMeta(meta);
+			}
+		}
+		
+		return false;
+	}
+	
+	public static boolean itemIsFinishedBook(ItemStack item) {
+    	return item != null && item.getType().equals(Material.WRITTEN_BOOK);
+    }
+	
+	public static boolean itemIsAir(ItemStack item) {
+    	return item != null && item.getType().equals(Material.AIR);
+    }
 	
 	public static String computeMD5Hash(ItemStack key) {
 		MessageDigest md;

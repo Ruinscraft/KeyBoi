@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.UUID;
 
 import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
 import org.bukkit.block.Barrel;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -28,9 +27,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
-import org.bukkit.persistence.PersistentDataType;
 
 import net.md_5.bungee.api.ChatColor;
 
@@ -97,7 +94,7 @@ public class KeyListener implements Listener{
     	Player player = evt.getPlayer();
     	ItemStack placed = evt.getItemInHand();
 
-    	if(itemIsKey(placed)) {
+    	if(DataManager.itemIsKey(plugin, placed)) {
     		evt.setCancelled(true);
     		setOutputMessage(player, MSG_ERROR_CANT_PLACE_KEY_BLOCK);
     	}
@@ -202,7 +199,7 @@ public class KeyListener implements Listener{
 	        			else if(playerHoldingKey(player)){
 	        				ItemStack key = player.getInventory().getItemInMainHand();
 	        				
-	        				if(!itemIsAir(key)) {
+	        				if(!DataManager.itemIsAir(key)) {
 		        				dm.setKeyTags(player, key, sign);
 		        				
 		        				if(player.isOnline()) {
@@ -249,29 +246,9 @@ public class KeyListener implements Listener{
     private boolean playerHoldingKey(Player player) {
     	ItemStack inHand = player.getInventory().getItemInMainHand();
     	
-    	return itemIsKey(inHand);
+    	return DataManager.itemIsKey(plugin, inHand);
     }
-    
-    private boolean itemIsKey(ItemStack item) {
-    	if(itemIsAir(item)) {
-    		return false;
-    	}
-    	else {
-    		if(item.hasItemMeta()) {
-		    	ItemMeta meta = item.getItemMeta();
-		    	PersistentDataContainer pdc = meta.getPersistentDataContainer();
-		    	
-		    	// TODO: clean this up
-		    	return pdc.has(new NamespacedKey(plugin, "keyboi-creator"), PersistentDataType.STRING)
-		    		&& meta.hasLore()
-		    		&& meta.getLore().get(0).equals(ChatColor.GOLD + "-- Key --");
-    		}
-    		else {
-    			return false;
-    		}
-    	}
-    }
-    
+        
     private Sign blockHasKeySign(Block block) {
     	List<Block> surroundingBlocks = new ArrayList<Block>();
     	
@@ -381,9 +358,5 @@ public class KeyListener implements Listener{
     	}
     	output = output.trim();
     	return output;
-    }
-    
-    private boolean itemIsAir(ItemStack item) {
-    	return item != null && item.getType().equals(Material.AIR);
     }
 }

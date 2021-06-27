@@ -143,7 +143,6 @@ public class KeyListener implements Listener{
         				Inventory inv = chest.getInventory();
         				
         				if(inv instanceof DoubleChestInventory) {
-        					player.sendMessage("(Debug) Block is double chest");
         					DoubleChest dc = (DoubleChest) inv.getHolder();
         					
 	        				signInfo = blockHasKeySign(dc.getLeftSide().getInventory().getLocation().getBlock());

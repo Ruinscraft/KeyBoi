@@ -29,6 +29,12 @@ A **key** is an item that can unlock the padlock. Any item or block may become a
 ### Removing key information from an item
 If you decide to remove key data from an item, hold the key in your main hand and type and run "/key remove". If the key you are holding was made by someone else, you will get a warning message and have to type the command again. Be careful, this process cannot be undone!
 
+## List of commands
+* /key - show all KeyBoi commands
+* /key create - creates a stack of items into keys
+* /key remove - removes key data from a key item
+* /key tutorial - shows steps on how to use KeyBoi
+
 ## Current known issues
 1. Lockable blocks may only have one usable padlock at any given time. If you were to place a second or third padlock on the block, the key it will expect may be unknown.
-2. Opening iron doors and iron trapdoors with a written book key may open the book itself after opening the door/trapdoor.
+2. Opening iron doors and iron trapdoors with a written book key may open the book itself, but the door/trapdoor will still open.

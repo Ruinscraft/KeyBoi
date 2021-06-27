@@ -3,6 +3,7 @@ package com.ruinscraft.keyboi;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.UUID;
 
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -24,6 +25,8 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
@@ -43,9 +46,23 @@ public class KeyListener implements Listener{
 	private final String MSG_ERROR_NEED_KEY = ChatColor.YELLOW + "You need a " + ChatColor.BOLD + "key" + ChatColor.RESET + ChatColor.YELLOW + " to open this.";
 	private final String MSG_ERROR_UNABLE_TO_LOCK = ChatColor.RED + "Unable to set key values for lock.";
 	private final String MSG_ERROR_WRONG_KEY = ChatColor.YELLOW + "This key doesn't seem to fit the lock...";
+	private final String MSG_ERROR_CANT_PLACE_KEY_BLOCK = ChatColor.YELLOW + "Can't place a block with key information";
+	
+	// used for messages that may output several times, to prevent spamming
+	HashMap<UUID, OutputMessage> playerOutputMessages;
 	
     public KeyListener(KeyBoi plugin) {
     	this.plugin = plugin;
+    	this.playerOutputMessages = new HashMap<UUID, OutputMessage>();
+    }
+    
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent evt) {
+    	Player player = evt.getPlayer();
+    	
+    	if(playerOutputMessages.containsKey(player.getUniqueId())) {
+    		playerOutputMessages.remove(player.getUniqueId());
+    	}
     }
     
     @EventHandler
@@ -82,9 +99,7 @@ public class KeyListener implements Listener{
 
     	if(itemIsKey(placed)) {
     		evt.setCancelled(true);
-    		if(player.isOnline()) {
-    			player.sendMessage(ChatColor.YELLOW + "Can't place a block with key information");
-    		}
+    		setOutputMessage(player, MSG_ERROR_CANT_PLACE_KEY_BLOCK);
     	}
     }
     /**
@@ -124,9 +139,18 @@ public class KeyListener implements Listener{
         			if(dm.containerHasKeyTags(pdc)) {
             			if(dm.isLocked(pdc)) {
             				evt.setCancelled(true);
+            				
+            				// partial fix for iron doors
+            				if(evt.getHand() == EquipmentSlot.OFF_HAND){
+            					evt.setCancelled(false);
+            					return;
+            				}
+            				
             				if(player.isSneaking()) {
             					evt.setCancelled(false);
+            					return;
             				}
+            				
             				if(playerHoldingKey(player) || playerIsAdmin(player)) {
             					ItemStack key = player.getInventory().getItemInMainHand();
             					
@@ -151,15 +175,11 @@ public class KeyListener implements Listener{
             						state.update();
             					}
             					else {
-            						if(player.isOnline()) {
-            							player.sendMessage(MSG_ERROR_WRONG_KEY);
-            						}
+            						setOutputMessage(player, MSG_ERROR_WRONG_KEY);
             					}
             				}
             				else {
-            					if(player.isOnline()) {
-            						player.sendMessage(MSG_ERROR_NEED_KEY);
-            					}
+            					setOutputMessage(player, MSG_ERROR_NEED_KEY);
             				}
             			}
         			}
@@ -194,6 +214,32 @@ public class KeyListener implements Listener{
         		}
         	}
         }
+    }
+    
+    private void setOutputMessage(Player player, String message) {
+    	if(player.isOnline()) {
+    		if(playerOutputMessages.containsKey(player.getUniqueId())) {
+    			OutputMessage current = playerOutputMessages.get(player.getUniqueId());
+    			
+    			if(current.getMessage().equalsIgnoreCase(message)) {
+    				if(current.hasExpired(10000)) {
+    					current.setCurrentTimestamp();
+    					player.sendMessage(message);
+    				}
+    			}
+    			else {
+    				current.setMessage(message);
+    				current.setCurrentTimestamp();
+    				player.sendMessage(message);
+    			}
+    		}
+    		else {
+    			OutputMessage current = new OutputMessage(message);
+    			playerOutputMessages.put(player.getUniqueId(), current);
+    			
+    			player.sendMessage(message);
+    		}
+    	}
     }
     
     private boolean playerIsAdmin(Player player) {

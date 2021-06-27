@@ -128,13 +128,17 @@ public class KeyListener implements Listener{
         		if(blockIsDoor(clickedBlock) && signInfo == null) {
         			Door d = (Door) clickedBlock.getBlockData();
         			
-        			if(d.getHalf() == Half.TOP) {
-        				Block bottomHalf = clickedBlock.getRelative(BlockFace.DOWN);
-        				signInfo = blockHasKeySign(bottomHalf);
-        			}
-        			else {
-        				Block topHalf = clickedBlock.getRelative(BlockFace.UP);
-        				signInfo = blockHasKeySign(topHalf);
+        			signInfo = blockHasKeySign(clickedBlock);
+        			
+        			if(signInfo == null) {
+	        			if(d.getHalf() == Half.TOP) {
+	        				Block bottomHalf = clickedBlock.getRelative(BlockFace.DOWN);
+	        				signInfo = blockHasKeySign(bottomHalf);
+	        			}
+	        			else{
+	        				Block topHalf = clickedBlock.getRelative(BlockFace.UP);
+	        				signInfo = blockHasKeySign(topHalf);
+	        			}
         			}
         			
         			if(signInfo == null) {
@@ -147,14 +151,18 @@ public class KeyListener implements Listener{
 							else {
 								Door door = (Door) b.getBlockData();
 								
-								if(door.getHalf() == Half.TOP) {
-	                				Block bottomHalf = b.getRelative(BlockFace.DOWN);
-	                				signInfo = blockHasKeySign(bottomHalf);
-	                			}
-	                			else {
-	                				Block topHalf = b.getRelative(BlockFace.UP);
-	                				signInfo = blockHasKeySign(topHalf);
-	                			}
+								signInfo = blockHasKeySign(b);
+								
+								if(signInfo == null) {
+									if(door.getHalf() == Half.TOP) {
+		                				Block bottomHalf = b.getRelative(BlockFace.DOWN);
+		                				signInfo = blockHasKeySign(bottomHalf);
+		                			}
+									else{
+		                				Block topHalf = b.getRelative(BlockFace.UP);
+		                				signInfo = blockHasKeySign(topHalf);
+		                			}
+								}
 								
 								if(signInfo != null) {
 									break;
@@ -372,8 +380,6 @@ public class KeyListener implements Listener{
     	surroundingBlocks.add(block.getRelative(BlockFace.SOUTH));
     	surroundingBlocks.add(block.getRelative(BlockFace.EAST));
     	surroundingBlocks.add(block.getRelative(BlockFace.WEST));
-    	surroundingBlocks.add(block.getRelative(BlockFace.UP));
-    	surroundingBlocks.add(block.getRelative(BlockFace.DOWN));
     	
     	for(Block b : surroundingBlocks) {
     		if(blockIsSign(b)) {

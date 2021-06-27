@@ -17,6 +17,7 @@ import org.bukkit.block.Sign;
 import org.bukkit.block.data.Bisected.Half;
 import org.bukkit.block.data.Openable;
 import org.bukkit.block.data.type.Door;
+import org.bukkit.block.data.type.Door.Hinge;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -135,6 +136,32 @@ public class KeyListener implements Listener{
         				Block topHalf = clickedBlock.getRelative(BlockFace.UP);
         				signInfo = blockHasKeySign(topHalf);
         			}
+        			
+        			if(signInfo == null) {
+        				List<Block> doors = getDoors(clickedBlock);
+						
+						for(Block b : doors) {
+							if(b == null) {
+								break;
+							}
+							else {
+								Door door = (Door) b.getBlockData();
+								
+								if(door.getHalf() == Half.TOP) {
+	                				Block bottomHalf = b.getRelative(BlockFace.DOWN);
+	                				signInfo = blockHasKeySign(bottomHalf);
+	                			}
+	                			else {
+	                				Block topHalf = b.getRelative(BlockFace.UP);
+	                				signInfo = blockHasKeySign(topHalf);
+	                			}
+								
+								if(signInfo != null) {
+									break;
+								}
+							}
+						}
+        			}
         		}
         		
         		if(blockIsStorage(clickedBlock) && signInfo == null) {
@@ -184,24 +211,46 @@ public class KeyListener implements Listener{
             					ItemStack key = player.getInventory().getItemInMainHand();
             					
             					if(dm.playerKeyMatchesLock(key, pdc)) {
-            						if(blockIsDoor(clickedBlock) || blockIsTrapdoor(clickedBlock) || blockIsGate(clickedBlock)) {
-            							Openable open = (Openable) state.getBlockData();
-            							if(open.isOpen()) {
-            								open.setOpen(false);
-            							}
-            							else {
-            								open.setOpen(true);
-            							}
+            						if(blockIsDoor(clickedBlock)) {
+            							List<Block> doors = getDoors(clickedBlock);
             							
-            							state.setBlockData(open);
+            							for(Block door : doors) {
+            								if(door == null) {
+            									break;
+            								}
+            								else {
+	            								Openable open = (Openable) door.getBlockData();
+	            								
+	            								if(open.isOpen()) {
+	            									open.setOpen(false);
+	            								}
+	            								else {
+	            									open.setOpen(true);
+	            								}
+	            								
+	            								door.setBlockData(open);
+	            								door.getState().update();
+            								}
+            							}
+            						}
+            						else if(blockIsTrapdoor(clickedBlock) || blockIsGate(clickedBlock)) {
+            							Openable open = (Openable) clickedBlock.getBlockData();
+        								
+        								if(open.isOpen()) {
+        									open.setOpen(false);
+        								}
+        								else {
+        									open.setOpen(true);
+        								}
+        								
+        								state.setBlockData(open);
+        								state.update();
             						}
             						else if(blockIsStorage(clickedBlock)) {
             							Container container = (Container) state;
             							
             							player.openInventory(container.getInventory());
             						}
-            						
-            						state.update();
             					}
             					else {
             						setOutputMessage(player, MSG_ERROR_WRONG_KEY);
@@ -271,6 +320,41 @@ public class KeyListener implements Listener{
     	}
     }
     
+    private List<Block> getDoors(Block starting) {
+    	if(!blockIsDoor(starting)) {
+    		return null;
+    	}
+    	else {
+    		List<Block> doors = new ArrayList<Block>();
+    		doors.add(starting);
+    		
+    		Door firstDoor = (Door) starting.getBlockData();
+
+			List<Block> surroundingBlocks = new ArrayList<Block>();
+	    	
+	    	surroundingBlocks.add(starting.getRelative(BlockFace.NORTH));
+	    	surroundingBlocks.add(starting.getRelative(BlockFace.SOUTH));
+	    	surroundingBlocks.add(starting.getRelative(BlockFace.EAST));
+	    	surroundingBlocks.add(starting.getRelative(BlockFace.WEST));
+	    	
+	    	for(Block b : surroundingBlocks) {
+	    		if(blockIsDoor(b)) {
+	    			Door otherDoor = (Door) b.getBlockData();
+	    			
+	    			// if the adjacent blocks are both doors, both facing the same direction
+	    			// and have opposite hinges, they are double doors
+	    			if(otherDoor.getFacing().equals(firstDoor.getFacing())) {
+	    				if(!otherDoor.getHinge().equals(firstDoor.getHinge())) {
+	    					doors.add(b);
+	    					return doors;
+	    				}
+	    			}
+	    		}
+	    	}
+	
+			return doors;
+    	}
+    }
     private boolean playerIsAdmin(Player player) {
     	return player.hasPermission("keyboi.admin");
     }

@@ -3,16 +3,9 @@ package com.ruinscraft.keyboi;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.Map.Entry;
 
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
-import org.bukkit.World;
-import org.bukkit.block.Banner;
 import org.bukkit.block.Barrel;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -20,46 +13,21 @@ import org.bukkit.block.BlockState;
 import org.bukkit.block.Chest;
 import org.bukkit.block.Container;
 import org.bukkit.block.DoubleChest;
-import org.bukkit.block.ShulkerBox;
 import org.bukkit.block.Sign;
-import org.bukkit.block.banner.Pattern;
 import org.bukkit.block.data.Bisected.Half;
-import org.bukkit.block.data.BlockData;
-import org.bukkit.block.data.Directional;
 import org.bukkit.block.data.Openable;
 import org.bukkit.block.data.type.Door;
-import org.bukkit.block.data.type.Gate;
-import org.bukkit.block.data.type.TrapDoor;
-import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
-import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.inventory.DoubleChestInventory;
-import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.PlayerInventory;
-import org.bukkit.inventory.meta.BannerMeta;
-import org.bukkit.inventory.meta.BlockStateMeta;
-import org.bukkit.inventory.meta.BookMeta;
-import org.bukkit.inventory.meta.EnchantmentStorageMeta;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.inventory.meta.MapMeta;
-import org.bukkit.inventory.meta.PotionMeta;
-import org.bukkit.map.MapView;
-import org.bukkit.metadata.FixedMetadataValue;
-import org.bukkit.metadata.MetadataValue;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.scheduler.BukkitTask;
-import org.bukkit.scoreboard.DisplaySlot;
-import org.bukkit.scoreboard.Objective;
-import org.bukkit.scoreboard.Scoreboard;
 
 import net.md_5.bungee.api.ChatColor;
 
@@ -107,6 +75,13 @@ public class KeyListener implements Listener{
     	}
     }
     
+    @EventHandler
+    public void onBlockPlaceEvent(BlockPlaceEvent evt) {
+    	Player player = evt.getPlayer();
+    	Block block = evt.getBlockAgainst();
+    	
+    	evt.setCancelled(false);
+    }
     /**
      * This function handles all Player interactions with locked blocks.
      * @param evt - called Player interact event
@@ -143,8 +118,8 @@ public class KeyListener implements Listener{
         			
         			if(dm.containerHasKeyTags(pdc)) {
             			if(dm.isLocked(pdc)) {
-            				evt.setCancelled(true);
             				if(playerHoldingKey(player) || playerIsAdmin(player)) {
+            					evt.setCancelled(true);
             					ItemStack key = player.getInventory().getItemInMainHand();
             					
             					if(dm.playerKeyMatchesLock(key, pdc) || playerIsAdmin(player)) {
@@ -219,17 +194,22 @@ public class KeyListener implements Listener{
     
     private boolean playerHoldingKey(Player player) {
     	ItemStack inHand = player.getInventory().getItemInMainHand();
-    	if(inHand == null || inHand.getType().equals(Material.AIR)) {
+    	if(itemIsAir(inHand)) {
     		return false;
     	}
     	else {
-	    	ItemMeta meta = inHand.getItemMeta();
-	    	PersistentDataContainer pdc = meta.getPersistentDataContainer();
-	    	
-	    	// TODO: clean this up
-	    	return pdc.has(new NamespacedKey(plugin, "keyboi-creator"), PersistentDataType.STRING)
-	    		&& meta.hasLore()
-	    		&& meta.getLore().get(0).equals(ChatColor.GOLD + "-- Key --");
+    		if(inHand.hasItemMeta()) {
+		    	ItemMeta meta = inHand.getItemMeta();
+		    	PersistentDataContainer pdc = meta.getPersistentDataContainer();
+		    	
+		    	// TODO: clean this up
+		    	return pdc.has(new NamespacedKey(plugin, "keyboi-creator"), PersistentDataType.STRING)
+		    		&& meta.hasLore()
+		    		&& meta.getLore().get(0).equals(ChatColor.GOLD + "-- Key --");
+    		}
+    		else {
+    			return false;
+    		}
     	}
     }
     
@@ -315,7 +295,6 @@ public class KeyListener implements Listener{
 	}
     /**
      * Checks whether a block is a chest, double chest, or barrel
-     * (note that Enderchests are not checked)
      * @param block - Block to check
      * @return True if block is chest, False otherwise
      */
@@ -343,14 +322,6 @@ public class KeyListener implements Listener{
     	}
     	output = output.trim();
     	return output;
-    }
-    
-    private boolean itemIsFinishedBook(ItemStack item) {
-    	return item != null && item.getType().equals(Material.WRITTEN_BOOK);
-    }
-    
-    private boolean itemIsWritableBook(ItemStack item) {
-    	return item != null && item.getType().equals(Material.WRITABLE_BOOK);
     }
     
     private boolean itemIsAir(ItemStack item) {

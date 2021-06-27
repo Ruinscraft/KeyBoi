@@ -3,10 +3,8 @@ package com.ruinscraft.keyboi;
 import java.io.ByteArrayOutputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
-import java.util.List;
 import java.util.UUID;
 
 import org.bukkit.Bukkit;
@@ -22,7 +20,7 @@ import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.util.io.BukkitObjectOutputStream;
 
 public class DataManager {
-	public static KeyBoi plugin;
+	public KeyBoi plugin;
 	
 	public static final String KEY_IS_LOCKED = "keyboi-islocked";
 	public static final String KEY_KEYNAME = "keyboi-keyname";
@@ -223,7 +221,6 @@ public class DataManager {
 	        }
 	        return new String(hexChars);
 		} catch (NoSuchAlgorithmException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	    return null;

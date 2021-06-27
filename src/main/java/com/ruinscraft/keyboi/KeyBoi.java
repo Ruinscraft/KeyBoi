@@ -3,8 +3,6 @@ package com.ruinscraft.keyboi;
 
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
-import org.bukkit.configuration.file.FileConfiguration;
 
 public class KeyBoi extends JavaPlugin {
 	private KeyListener key;

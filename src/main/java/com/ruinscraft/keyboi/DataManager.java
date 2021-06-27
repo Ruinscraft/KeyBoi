@@ -152,6 +152,17 @@ public class DataManager {
 		return pdc.get(new NamespacedKey(plugin, KEY_IS_LOCKED), PersistentDataType.STRING).equalsIgnoreCase("true");
 	}
 	
+	public static boolean playerCreatedKey(KeyBoi plugin, Player player, ItemStack item) {
+		if(item.hasItemMeta()) {
+			PersistentDataContainer pdc = item.getItemMeta().getPersistentDataContainer();
+			
+			String creatorUUID = pdc.get(new NamespacedKey(plugin, KEY_KEYCREATOR), PersistentDataType.STRING);
+			
+			return UUID.fromString(creatorUUID).compareTo(player.getUniqueId()) == 0;
+		}
+		else return false;
+	}
+	
 	public boolean playerOwnsLock(Player player, PersistentDataContainer pdc) {
 		String ownerUUID = pdc.get(new NamespacedKey(plugin, KEY_LOCK_OWNER), PersistentDataType.STRING);
 		

@@ -21,10 +21,12 @@ public class KeyCommandExecutor implements CommandExecutor, TabCompleter{
 	
 	private final String MSG_SUCCESSFULLY_CREATED_KEY = ChatColor.GREEN + "Successfully created %d key(s)!";
 	private final String MSG_REMOVED_KEY_DATA_FROM_ITEM = ChatColor.YELLOW + "Removed key information from item(s)";
+	private final String MSG_CAUTION_KEY_REMOVAL = ChatColor.RED + "" + ChatColor.BOLD + "Warning!" + ChatColor.RESET + "" + ChatColor.YELLOW + " This is a key made by someone else!\nTo confirm removal of key data, type this command again.";
 	//private final String MSG_ERROR_NO_PERMISSION = ChatColor.RED + "You do not have permission to use that command.";
 	private final String MSG_ERROR_NO_ITEM_IN_HAND = ChatColor.RED + "You need to hold an item before creating a key";
 	private final String MSG_ERROR_CANNOT_MAKE_KEY = ChatColor.RED + "Unable to make key from item";
 	private final String MSG_ERROR_ITEM_NOT_KEY = ChatColor.RED + "This item is not a key";
+	private final String MSG_ERROR_ITEM_ALREADY_KEY = ChatColor.RED + "This item is already a key!";
 	
 	private final List<String> tabOptions;
 	private final List<String> adminTabOptions;
@@ -134,7 +136,10 @@ public class KeyCommandExecutor implements CommandExecutor, TabCompleter{
 			PlayerInventory callerInventory = caller.getInventory();
 			ItemStack itemInHand = callerInventory.getItemInMainHand();
 			if(!DataManager.itemIsAir(itemInHand)) {
-				if(DataManager.addKeyDataToItem(plugin, caller, itemInHand)) {	
+				if(DataManager.itemIsKey(plugin, itemInHand)) {
+					caller.sendMessage(MSG_ERROR_ITEM_ALREADY_KEY);
+				}
+				else if(DataManager.addKeyDataToItem(plugin, caller, itemInHand)) {	
 					caller.sendMessage(String.format(MSG_SUCCESSFULLY_CREATED_KEY, itemInHand.getAmount()));
 				}
 				else {
@@ -152,9 +157,43 @@ public class KeyCommandExecutor implements CommandExecutor, TabCompleter{
 			ItemStack key = caller.getInventory().getItemInMainHand();
 			
 			if(DataManager.itemIsKey(plugin, key)) {
-				DataManager.removeKeyDataFromItem(plugin, key);
 				
-				caller.sendMessage(MSG_REMOVED_KEY_DATA_FROM_ITEM);
+				if(!DataManager.playerCreatedKey(plugin, caller, key)) {
+					if(plugin.playerRemoveKeyDataMap.containsKey(caller.getUniqueId())) {
+						KeyRemovalHelper krh = plugin.playerRemoveKeyDataMap.get(caller.getUniqueId());
+						
+						// player decided to remove key from different item
+						if(!krh.isKey(key)) {
+							KeyRemovalHelper newKrh = new KeyRemovalHelper("KEY_REMOVAL", key, 2);
+							newKrh.increment();
+							
+							plugin.playerRemoveKeyDataMap.put(caller.getUniqueId(), newKrh);				
+							caller.sendMessage(MSG_CAUTION_KEY_REMOVAL);
+						}
+						else {
+							krh.increment();
+							
+							if(krh.reachedMax()) {
+								DataManager.removeKeyDataFromItem(plugin, key);
+								plugin.playerRemoveKeyDataMap.remove(caller.getUniqueId());
+								caller.sendMessage(MSG_REMOVED_KEY_DATA_FROM_ITEM);
+							}
+						}
+					}
+					else {
+						KeyRemovalHelper krh = new KeyRemovalHelper("KEY_REMOVAL", key, 2);
+						krh.increment();
+						
+						plugin.playerRemoveKeyDataMap.put(caller.getUniqueId(), krh);
+						
+						caller.sendMessage(MSG_CAUTION_KEY_REMOVAL);
+					}
+				}
+				else {
+					DataManager.removeKeyDataFromItem(plugin, key);
+					
+					caller.sendMessage(MSG_REMOVED_KEY_DATA_FROM_ITEM);
+				}
 			}
 			else {
 				caller.sendMessage(MSG_ERROR_ITEM_NOT_KEY);

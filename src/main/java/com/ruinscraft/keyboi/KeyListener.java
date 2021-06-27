@@ -46,11 +46,13 @@ public class KeyListener implements Listener{
 	private final String MSG_ERROR_CANT_PLACE_KEY_BLOCK = ChatColor.YELLOW + "Can't place a block with key information";
 	
 	// used for messages that may output several times, to prevent spamming
-	HashMap<UUID, OutputMessage> playerOutputMessages;
+	private HashMap<UUID, OutputMessage> playerOutputMessages;
+	
 	
     public KeyListener(KeyBoi plugin) {
     	this.plugin = plugin;
     	this.playerOutputMessages = new HashMap<UUID, OutputMessage>();
+    	
     }
     
     @EventHandler
@@ -58,6 +60,10 @@ public class KeyListener implements Listener{
     	Player player = evt.getPlayer();
     	
     	if(playerOutputMessages.containsKey(player.getUniqueId())) {
+    		playerOutputMessages.remove(player.getUniqueId());
+    	}
+    	
+    	if(plugin.playerRemoveKeyDataMap.containsKey(player.getUniqueId())) {
     		playerOutputMessages.remove(player.getUniqueId());
     	}
     }

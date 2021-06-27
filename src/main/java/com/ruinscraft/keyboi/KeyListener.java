@@ -78,9 +78,14 @@ public class KeyListener implements Listener{
     @EventHandler
     public void onBlockPlaceEvent(BlockPlaceEvent evt) {
     	Player player = evt.getPlayer();
-    	Block block = evt.getBlockAgainst();
-    	
-    	evt.setCancelled(false);
+    	ItemStack placed = evt.getItemInHand();
+
+    	if(itemIsKey(placed)) {
+    		evt.setCancelled(true);
+    		if(player.isOnline()) {
+    			player.sendMessage(ChatColor.YELLOW + "Can't place a block with key information");
+    		}
+    	}
     }
     /**
      * This function handles all Player interactions with locked blocks.
@@ -118,8 +123,11 @@ public class KeyListener implements Listener{
         			
         			if(dm.containerHasKeyTags(pdc)) {
             			if(dm.isLocked(pdc)) {
+            				evt.setCancelled(true);
+            				if(player.isSneaking()) {
+            					evt.setCancelled(false);
+            				}
             				if(playerHoldingKey(player) || playerIsAdmin(player)) {
-            					evt.setCancelled(true);
             					ItemStack key = player.getInventory().getItemInMainHand();
             					
             					if(dm.playerKeyMatchesLock(key, pdc) || playerIsAdmin(player)) {
@@ -194,12 +202,17 @@ public class KeyListener implements Listener{
     
     private boolean playerHoldingKey(Player player) {
     	ItemStack inHand = player.getInventory().getItemInMainHand();
-    	if(itemIsAir(inHand)) {
+    	
+    	return itemIsKey(inHand);
+    }
+    
+    private boolean itemIsKey(ItemStack item) {
+    	if(itemIsAir(item)) {
     		return false;
     	}
     	else {
-    		if(inHand.hasItemMeta()) {
-		    	ItemMeta meta = inHand.getItemMeta();
+    		if(item.hasItemMeta()) {
+		    	ItemMeta meta = item.getItemMeta();
 		    	PersistentDataContainer pdc = meta.getPersistentDataContainer();
 		    	
 		    	// TODO: clean this up

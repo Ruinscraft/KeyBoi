@@ -13,6 +13,7 @@ import org.bukkit.block.BlockState;
 import org.bukkit.block.Chest;
 import org.bukkit.block.Container;
 import org.bukkit.block.DoubleChest;
+import org.bukkit.block.Lectern;
 import org.bukkit.block.Sign;
 import org.bukkit.block.data.Bisected.Half;
 import org.bukkit.block.data.Openable;
@@ -259,6 +260,11 @@ public class KeyListener implements Listener{
             							
             							player.openInventory(container.getInventory());
             						}
+            						else if(blockIsLectern(clickedBlock)) {
+            							Lectern lectern = (Lectern) state;
+            							
+            							player.openInventory(lectern.getInventory());
+            						}
             					}
             					else {
             						setOutputMessage(player, MSG_ERROR_WRONG_KEY);
@@ -395,7 +401,11 @@ public class KeyListener implements Listener{
     }
     
     private boolean blockIsLockable(Block block) {
-    	return blockIsDoor(block) || blockIsTrapdoor(block) || blockIsGate(block) || blockIsStorage(block);
+    	return blockIsDoor(block)
+    		|| blockIsTrapdoor(block)
+    		|| blockIsGate(block)
+    		|| blockIsStorage(block)
+    		|| blockIsLectern(block);
     }
     
     private boolean blockIsSign(Block block) {
@@ -462,6 +472,10 @@ public class KeyListener implements Listener{
     		 || block.getState() instanceof DoubleChest
     		 || block.getState() instanceof Barrel
     		 );
+    }
+    
+    private boolean blockIsLectern(Block block) {
+    	return block != null && block.getType().equals(Material.LECTERN);
     }
     
     private boolean signIsKeySign(Sign s) {

@@ -180,10 +180,12 @@ public class KeyListener implements Listener{
         				
         				if(inv instanceof DoubleChestInventory) {
         					DoubleChest dc = (DoubleChest) inv.getHolder();
+        					Chest leftChest = (Chest) dc.getLeftSide();
+        					Chest rightChest = (Chest) dc.getRightSide();
         					
-	        				signInfo = blockHasKeySign(dc.getLeftSide().getInventory().getLocation().getBlock());
+	        				signInfo = blockHasKeySign(leftChest.getBlock());
 	        				if(signInfo == null) {
-	        					signInfo = blockHasKeySign(dc.getLeftSide().getInventory().getLocation().getBlock());
+	        					signInfo = blockHasKeySign(rightChest.getBlock());
 	        				}
         				}
         			}
